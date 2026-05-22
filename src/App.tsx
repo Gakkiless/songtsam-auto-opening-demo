@@ -24,6 +24,13 @@ import type { GenerateOpeningResult, OpeningPayload, Product } from "./types/dom
 
 type TabKey = "home" | "plans" | "inventory" | "payload";
 
+export interface ProductOption {
+  productCode: string;
+  productName: string;
+  businessType: Product["businessType"];
+  itineraryCount: number;
+}
+
 const { Header, Content } = Layout;
 const { Text, Title } = Typography;
 
@@ -38,19 +45,26 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("home");
   const [startDate, setStartDate] = useState("2026-06-01");
   const [endDate, setEndDate] = useState("2026-06-30");
-  const [selectedProductKeys, setSelectedProductKeys] = useState(["P001|IT-XMMLB-7D"]);
+  const [draftProductCode, setDraftProductCode] = useState("P001");
+  const [draftItineraryKey, setDraftItineraryKey] = useState("P001|IT-XMMLB-7D");
+  const [addedItineraryKeys, setAddedItineraryKeys] = useState(["P001|IT-XMMLB-7D"]);
   const [selectionError, setSelectionError] = useState("");
   const [result, setResult] = useState<GenerateOpeningResult | null>(null);
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
   const [executedPayloads, setExecutedPayloads] = useState<OpeningPayload[]>([]);
   const [executionMessage, setExecutionMessage] = useState("");
 
-  const allProductOptions = useMemo(() => products, []);
+  const allProductOptions = useMemo(() => buildProductOptions(products), []);
+
+  const draftItineraryOptions = useMemo(
+    () => products.filter((product) => product.productCode === draftProductCode),
+    [draftProductCode],
+  );
 
   const selectedProducts = useMemo(() => {
-    const selectedKeySet = new Set(selectedProductKeys);
+    const selectedKeySet = new Set(addedItineraryKeys);
     return products.filter((product) => selectedKeySet.has(getProductItineraryKey(product)));
-  }, [selectedProductKeys]);
+  }, [addedItineraryKeys]);
 
   const generatedSummary = useMemo(() => {
     if (!result) return "未生成";
@@ -73,8 +87,42 @@ function App() {
     resetGeneratedState();
   };
 
-  const handleSelectProductItineraries = (productKeys: string[]) => {
-    setSelectedProductKeys(productKeys);
+  const handleSelectDraftProduct = (productCode: string) => {
+    const nextItinerary = products.find((product) => product.productCode === productCode);
+    setDraftProductCode(productCode);
+    setDraftItineraryKey(nextItinerary ? getProductItineraryKey(nextItinerary) : "");
+    setSelectionError("");
+  };
+
+  const handleSelectDraftItinerary = (itineraryKey: string) => {
+    setDraftItineraryKey(itineraryKey);
+    setSelectionError("");
+  };
+
+  const handleAddDraftItinerary = () => {
+    if (!draftProductCode || !draftItineraryKey) {
+      setSelectionError("请先选择产品和行程。");
+      return;
+    }
+
+    if (addedItineraryKeys.includes(draftItineraryKey)) {
+      setSelectionError("该行程已经在待开团清单中。");
+      return;
+    }
+
+    setAddedItineraryKeys((currentKeys) => [...currentKeys, draftItineraryKey]);
+    setSelectionError("");
+    resetGeneratedState();
+  };
+
+  const handleRemoveAddedItinerary = (itineraryKey: string) => {
+    setAddedItineraryKeys((currentKeys) => currentKeys.filter((key) => key !== itineraryKey));
+    setSelectionError("");
+    resetGeneratedState();
+  };
+
+  const handleClearAddedItineraries = () => {
+    setAddedItineraryKeys([]);
     setSelectionError("");
     resetGeneratedState();
   };
@@ -204,14 +252,20 @@ function App() {
               startDate={startDate}
               endDate={endDate}
               productOptions={allProductOptions}
-              selectedProductKeys={selectedProductKeys}
+              draftProductCode={draftProductCode}
+              draftItineraryKey={draftItineraryKey}
+              draftItineraryOptions={draftItineraryOptions}
               selectedProducts={selectedProducts}
               productOpeningConfigs={productOpeningConfigs}
               config={strategyConfig}
               result={result}
               selectionError={selectionError}
               onDateRangeChange={handleDateRangeChange}
-              onSelectProductItineraries={handleSelectProductItineraries}
+              onSelectDraftProduct={handleSelectDraftProduct}
+              onSelectDraftItinerary={handleSelectDraftItinerary}
+              onAddDraftItinerary={handleAddDraftItinerary}
+              onRemoveAddedItinerary={handleRemoveAddedItinerary}
+              onClearAddedItineraries={handleClearAddedItineraries}
               onGenerate={handleGenerate}
             />
           ) : null}
@@ -241,6 +295,24 @@ function App() {
 
 function getProductItineraryKey(product: Product): string {
   return `${product.productCode}|${product.itineraryCode}`;
+}
+
+function buildProductOptions(productItineraries: Product[]): ProductOption[] {
+  const optionByProductCode = new Map<string, ProductOption>();
+
+  productItineraries.forEach((product) => {
+    const current = optionByProductCode.get(product.productCode);
+    optionByProductCode.set(product.productCode, {
+      productCode: product.productCode,
+      productName: product.productName,
+      businessType: product.businessType,
+      itineraryCount: (current?.itineraryCount ?? 0) + 1,
+    });
+  });
+
+  return [...optionByProductCode.values()].sort((a, b) =>
+    `${a.productCode}-${a.productName}`.localeCompare(`${b.productCode}-${b.productName}`, "zh-CN"),
+  );
 }
 
 export default App;

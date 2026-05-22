@@ -1,6 +1,8 @@
 import {
   CalendarOutlined,
   CheckCircleOutlined,
+  DeleteOutlined,
+  PlusOutlined,
   PlayCircleOutlined,
   SearchOutlined,
   SettingOutlined,
@@ -34,31 +36,50 @@ import type {
 
 const { Text } = Typography;
 
+interface ProductOption {
+  productCode: string;
+  productName: string;
+  businessType: Product["businessType"];
+  itineraryCount: number;
+}
+
 export function AutoOpeningPage({
   startDate,
   endDate,
   productOptions,
-  selectedProductKeys,
+  draftProductCode,
+  draftItineraryKey,
+  draftItineraryOptions,
   selectedProducts,
   productOpeningConfigs,
   config,
   result,
   selectionError,
   onDateRangeChange,
-  onSelectProductItineraries,
+  onSelectDraftProduct,
+  onSelectDraftItinerary,
+  onAddDraftItinerary,
+  onRemoveAddedItinerary,
+  onClearAddedItineraries,
   onGenerate,
 }: {
   startDate: string;
   endDate: string;
-  productOptions: Product[];
-  selectedProductKeys: string[];
+  productOptions: ProductOption[];
+  draftProductCode: string;
+  draftItineraryKey: string;
+  draftItineraryOptions: Product[];
   selectedProducts: Product[];
   productOpeningConfigs: ProductOpeningConfig[];
   config: StrategyConfig;
   result: GenerateOpeningResult | null;
   selectionError: string;
   onDateRangeChange: (startDate: string, endDate: string) => void;
-  onSelectProductItineraries: (productKeys: string[]) => void;
+  onSelectDraftProduct: (productCode: string) => void;
+  onSelectDraftItinerary: (itineraryKey: string) => void;
+  onAddDraftItinerary: () => void;
+  onRemoveAddedItinerary: (itineraryKey: string) => void;
+  onClearAddedItineraries: () => void;
   onGenerate: () => void;
 }) {
   const openableCount = result?.openingPlans.filter((plan) => plan.status === "可开团").length ?? 0;
@@ -67,10 +88,15 @@ export function AutoOpeningPage({
   const conflictCount = result?.openingPlans.filter((plan) => plan.status === "规则冲突").length ?? 0;
 
   const productSelectOptions = productOptions.map((product) => ({
-    value: getProductItineraryKey(product),
-    label: `${product.productCode} / ${product.productName} / ${product.itineraryCode} / ${product.itineraryName} / ${product.businessType}`,
+    value: product.productCode,
+    label: `${product.productCode} / ${product.productName} / ${product.businessType} / ${product.itineraryCount} 条行程`,
+    searchText: `${product.productCode} ${product.productName} ${product.businessType}`.toLowerCase(),
+  }));
+  const itinerarySelectOptions = draftItineraryOptions.map((itinerary) => ({
+    value: getProductItineraryKey(itinerary),
+    label: `${itinerary.itineraryCode} / ${itinerary.itineraryName} / ${getItineraryShortCode(itinerary)}`,
     searchText:
-      `${product.productCode} ${product.productName} ${product.itineraryCode} ${product.itineraryName} ${product.businessType} ${getItineraryShortCode(product)}`.toLowerCase(),
+      `${itinerary.productCode} ${itinerary.productName} ${itinerary.itineraryCode} ${itinerary.itineraryName} ${itinerary.businessType} ${getItineraryShortCode(itinerary)}`.toLowerCase(),
   }));
 
   return (
@@ -104,24 +130,88 @@ export function AutoOpeningPage({
               </div>
 
               <div>
-                <Text strong>产品 / 行程</Text>
+                <Text strong>产品</Text>
                 <Select
-                  aria-label="产品行程"
-                  mode="multiple"
+                  aria-label="产品"
                   showSearch
-                  value={selectedProductKeys}
-                  onChange={onSelectProductItineraries}
+                  value={draftProductCode}
+                  onChange={onSelectDraftProduct}
                   options={productSelectOptions}
                   filterOption={(input, option) =>
                     String((option as { searchText?: string })?.searchText ?? "").includes(
                       input.trim().toLowerCase(),
                     )
                   }
-                  maxTagCount="responsive"
                   suffixIcon={<SearchOutlined />}
-                  placeholder="输入产品代码、产品名称、行程代码或行程名称"
+                  placeholder="输入产品代码、产品名称或业务类型"
                   className="full-width control-input"
                 />
+              </div>
+
+              <div>
+                <Text strong>行程</Text>
+                <Select
+                  aria-label="行程"
+                  showSearch
+                  disabled={!draftProductCode}
+                  value={draftItineraryKey}
+                  onChange={onSelectDraftItinerary}
+                  options={itinerarySelectOptions}
+                  filterOption={(input, option) =>
+                    String((option as { searchText?: string })?.searchText ?? "").includes(
+                      input.trim().toLowerCase(),
+                    )
+                  }
+                  suffixIcon={<SearchOutlined />}
+                  placeholder={
+                    draftProductCode
+                      ? "输入行程代码、行程名称或酒店简称"
+                      : "请先选择产品"
+                  }
+                  className="full-width control-input"
+                />
+                <Space size={8} wrap className="control-actions">
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={onAddDraftItinerary}
+                    disabled={!draftProductCode || !draftItineraryKey}
+                  >
+                    添加到待开团清单
+                  </Button>
+                  <Button
+                    icon={<DeleteOutlined />}
+                    onClick={onClearAddedItineraries}
+                    disabled={selectedProducts.length === 0}
+                  >
+                    清空清单
+                  </Button>
+                </Space>
+              </div>
+
+              <div className="added-itinerary-list">
+                <Space align="center" className="full-width added-itinerary-header">
+                  <Text strong>待开团清单</Text>
+                  <Tag color="blue">{selectedProducts.length} 条</Tag>
+                </Space>
+                {selectedProducts.length > 0 ? (
+                  <Space wrap size={[6, 8]}>
+                    {selectedProducts.map((product) => (
+                      <Tag
+                        closable
+                        key={getProductItineraryKey(product)}
+                        onClose={(event) => {
+                          event.preventDefault();
+                          onRemoveAddedItinerary(getProductItineraryKey(product));
+                        }}
+                      >
+                        {product.productCode} / {product.itineraryName}
+                      </Tag>
+                    ))}
+                  </Space>
+                ) : (
+                  <Text type="secondary">先选择产品和行程，再添加到清单。</Text>
+                )}
               </div>
 
               {selectionError ? <Alert type="error" showIcon title={selectionError} /> : null}
@@ -264,7 +354,7 @@ export function AutoOpeningPage({
         </Row>
       ) : (
         <Card>
-          <Empty description="请选择一个或多个产品行程" />
+          <Empty description="请先把一个或多个行程添加到待开团清单" />
         </Card>
       )}
     </Space>

@@ -76,6 +76,22 @@ select {
   margin-top: 6px;
 }
 
+.control-actions {
+  margin-top: 8px;
+}
+
+.added-itinerary-list {
+  padding: 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.added-itinerary-header {
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
 .rule-alert {
   margin-top: 16px;
 }
