@@ -24,13 +24,6 @@ import type { GenerateOpeningResult, OpeningPayload, Product } from "./types/dom
 
 type TabKey = "home" | "plans" | "inventory" | "payload";
 
-export interface ProductOption {
-  productCode: string;
-  productName: string;
-  businessType: Product["businessType"];
-  itineraryCount: number;
-}
-
 const { Header, Content } = Layout;
 const { Text, Title } = Typography;
 
@@ -43,40 +36,21 @@ const tabs = [
 
 function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("home");
-  const [month, setMonth] = useState("2026-06");
-  const [selectedProductCode, setSelectedProductCode] = useState("P001");
-  const [selectedItineraryCode, setSelectedItineraryCode] = useState("IT-XMMLB-7D");
+  const [startDate, setStartDate] = useState("2026-06-01");
+  const [endDate, setEndDate] = useState("2026-06-30");
+  const [selectedProductKeys, setSelectedProductKeys] = useState(["P001|IT-XMMLB-7D"]);
   const [selectionError, setSelectionError] = useState("");
   const [result, setResult] = useState<GenerateOpeningResult | null>(null);
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
   const [executedPayloads, setExecutedPayloads] = useState<OpeningPayload[]>([]);
   const [executionMessage, setExecutionMessage] = useState("");
 
-  const allProductOptions = useMemo(() => buildProductOptions(products), []);
+  const allProductOptions = useMemo(() => products, []);
 
-  const itineraryOptions = useMemo(
-    () => products.filter((product) => product.productCode === selectedProductCode),
-    [selectedProductCode],
-  );
-
-  const selectedProduct = useMemo(
-    () =>
-      products.find(
-        (product) =>
-          product.productCode === selectedProductCode &&
-          product.itineraryCode === selectedItineraryCode,
-      ) ?? null,
-    [selectedItineraryCode, selectedProductCode],
-  );
-
-  const selectedProductConfig = useMemo(() => {
-    if (!selectedProduct) return null;
-    return (
-      productOpeningConfigs.find(
-        (openingConfig) => openingConfig.productCode === selectedProduct.productCode,
-      ) ?? null
-    );
-  }, [selectedProduct]);
+  const selectedProducts = useMemo(() => {
+    const selectedKeySet = new Set(selectedProductKeys);
+    return products.filter((product) => selectedKeySet.has(getProductItineraryKey(product)));
+  }, [selectedProductKeys]);
 
   const generatedSummary = useMemo(() => {
     if (!result) return "未生成";
@@ -92,37 +66,41 @@ function App() {
     setExecutionMessage("");
   };
 
-  const handleSelectProduct = (productCode: string) => {
-    const nextItineraries = products.filter((product) => product.productCode === productCode);
-    setSelectedProductCode(productCode);
-    setSelectedItineraryCode(nextItineraries[0]?.itineraryCode ?? "");
+  const handleDateRangeChange = (nextStartDate: string, nextEndDate: string) => {
+    setStartDate(nextStartDate);
+    setEndDate(nextEndDate);
     setSelectionError("");
     resetGeneratedState();
   };
 
-  const handleSelectItinerary = (itineraryCode: string) => {
-    setSelectedItineraryCode(itineraryCode);
+  const handleSelectProductItineraries = (productKeys: string[]) => {
+    setSelectedProductKeys(productKeys);
     setSelectionError("");
     resetGeneratedState();
   };
 
   const handleGenerate = () => {
-    if (!selectedProduct) {
-      setSelectionError("请先选择产品和行程。");
+    if (!startDate || !endDate || startDate > endDate) {
+      setSelectionError("请先选择有效的开始日期和结束日期。");
+      setActiveTab("home");
+      return;
+    }
+
+    if (selectedProducts.length === 0) {
+      setSelectionError("请至少选择一个产品行程。");
       setActiveTab("home");
       return;
     }
 
     setSelectionError("");
-    const [year, selectedMonth] = month.split("-").map(Number);
     const nextResult = generateOpeningPlans({
-      products: [selectedProduct],
+      products: selectedProducts,
       productOpeningConfigs,
       hotels,
       inventory,
       config: strategyConfig,
-      year,
-      month: selectedMonth,
+      startDate,
+      endDate,
     });
 
     const openablePlanIds = nextResult.openingPlans
@@ -187,7 +165,9 @@ function App() {
             <div>
               <Space size={8} className="songtsam-month">
                 <CalendarOutlined />
-                <Text>{month}</Text>
+                <Text>
+                  {startDate} 至 {endDate}
+                </Text>
               </Space>
               <Title level={3} className="songtsam-title">
                 松赞基本盘自动开团 Demo
@@ -221,19 +201,17 @@ function App() {
         <Content className="songtsam-content">
           {activeTab === "home" ? (
             <AutoOpeningPage
-              month={month}
+              startDate={startDate}
+              endDate={endDate}
               productOptions={allProductOptions}
-              itineraryOptions={itineraryOptions}
-              selectedProductCode={selectedProductCode}
-              selectedItineraryCode={selectedItineraryCode}
-              selectedProduct={selectedProduct}
-              selectedProductConfig={selectedProductConfig}
+              selectedProductKeys={selectedProductKeys}
+              selectedProducts={selectedProducts}
+              productOpeningConfigs={productOpeningConfigs}
               config={strategyConfig}
               result={result}
               selectionError={selectionError}
-              onMonthChange={setMonth}
-              onSelectProduct={handleSelectProduct}
-              onSelectItinerary={handleSelectItinerary}
+              onDateRangeChange={handleDateRangeChange}
+              onSelectProductItineraries={handleSelectProductItineraries}
               onGenerate={handleGenerate}
             />
           ) : null}
@@ -261,22 +239,8 @@ function App() {
   );
 }
 
-function buildProductOptions(productItineraries: Product[]): ProductOption[] {
-  const optionByProductCode = new Map<string, ProductOption>();
-
-  productItineraries.forEach((product) => {
-    const current = optionByProductCode.get(product.productCode);
-    optionByProductCode.set(product.productCode, {
-      productCode: product.productCode,
-      productName: product.productName,
-      businessType: product.businessType,
-      itineraryCount: (current?.itineraryCount ?? 0) + 1,
-    });
-  });
-
-  return [...optionByProductCode.values()].sort((a, b) =>
-    `${a.productCode}-${a.productName}`.localeCompare(`${b.productCode}-${b.productName}`, "zh-CN"),
-  );
+function getProductItineraryKey(product: Product): string {
+  return `${product.productCode}|${product.itineraryCode}`;
 }
 
 export default App;

@@ -1,5 +1,4 @@
 {
-  "baseRoomMaxUsageRatio": 0.9,
   "businessFrequencyRules": [
     {
       "ruleId": "FREQ-THEME-WEEKLY-SAT",

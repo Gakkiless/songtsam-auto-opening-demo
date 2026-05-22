@@ -34,42 +34,31 @@ import type {
 
 const { Text } = Typography;
 
-interface ProductOption {
-  productCode: string;
-  productName: string;
-  businessType: Product["businessType"];
-  itineraryCount: number;
-}
-
 export function AutoOpeningPage({
-  month,
+  startDate,
+  endDate,
   productOptions,
-  itineraryOptions,
-  selectedProductCode,
-  selectedItineraryCode,
-  selectedProduct,
-  selectedProductConfig,
+  selectedProductKeys,
+  selectedProducts,
+  productOpeningConfigs,
   config,
   result,
   selectionError,
-  onMonthChange,
-  onSelectProduct,
-  onSelectItinerary,
+  onDateRangeChange,
+  onSelectProductItineraries,
   onGenerate,
 }: {
-  month: string;
-  productOptions: ProductOption[];
-  itineraryOptions: Product[];
-  selectedProductCode: string;
-  selectedItineraryCode: string;
-  selectedProduct: Product | null;
-  selectedProductConfig: ProductOpeningConfig | null;
+  startDate: string;
+  endDate: string;
+  productOptions: Product[];
+  selectedProductKeys: string[];
+  selectedProducts: Product[];
+  productOpeningConfigs: ProductOpeningConfig[];
   config: StrategyConfig;
   result: GenerateOpeningResult | null;
   selectionError: string;
-  onMonthChange: (month: string) => void;
-  onSelectProduct: (productCode: string) => void;
-  onSelectItinerary: (itineraryCode: string) => void;
+  onDateRangeChange: (startDate: string, endDate: string) => void;
+  onSelectProductItineraries: (productKeys: string[]) => void;
   onGenerate: () => void;
 }) {
   const openableCount = result?.openingPlans.filter((plan) => plan.status === "可开团").length ?? 0;
@@ -77,10 +66,11 @@ export function AutoOpeningPage({
     result?.openingPlans.filter((plan) => plan.status === "资源不足").length ?? 0;
   const conflictCount = result?.openingPlans.filter((plan) => plan.status === "规则冲突").length ?? 0;
 
-  const productSelectOptions = productOptions.map((option) => ({
-    value: option.productCode,
-    label: `${option.productCode} / ${option.productName} / ${option.businessType} / ${option.itineraryCount} 条行程`,
-    searchText: `${option.productCode} ${option.productName} ${option.businessType}`.toLowerCase(),
+  const productSelectOptions = productOptions.map((product) => ({
+    value: getProductItineraryKey(product),
+    label: `${product.productCode} / ${product.productName} / ${product.itineraryCode} / ${product.itineraryName} / ${product.businessType}`,
+    searchText:
+      `${product.productCode} ${product.productName} ${product.itineraryCode} ${product.itineraryName} ${product.businessType} ${getItineraryShortCode(product)}`.toLowerCase(),
   }));
 
   return (
@@ -90,45 +80,47 @@ export function AutoOpeningPage({
           <Card title="开团条件" className="control-card">
             <Space orientation="vertical" size={14} className="full-width">
               <div>
-                <Text strong>月份</Text>
-                <Input
-                  type="month"
-                  value={month}
-                  onChange={(event) => onMonthChange(event.target.value)}
-                  prefix={<CalendarOutlined />}
-                  className="control-input"
-                />
+                <Text strong>日期区间</Text>
+                <Row gutter={10} className="control-input">
+                  <Col span={12}>
+                    <Input
+                      aria-label="开始日期"
+                      type="date"
+                      value={startDate}
+                      onChange={(event) => onDateRangeChange(event.target.value, endDate)}
+                      prefix={<CalendarOutlined />}
+                    />
+                  </Col>
+                  <Col span={12}>
+                    <Input
+                      aria-label="结束日期"
+                      type="date"
+                      value={endDate}
+                      onChange={(event) => onDateRangeChange(startDate, event.target.value)}
+                      prefix={<CalendarOutlined />}
+                    />
+                  </Col>
+                </Row>
               </div>
 
               <div>
-                <Text strong>产品</Text>
+                <Text strong>产品 / 行程</Text>
                 <Select
-                  aria-label="产品"
+                  aria-label="产品行程"
+                  mode="multiple"
                   showSearch
-                  value={selectedProductCode}
-                  onChange={onSelectProduct}
+                  value={selectedProductKeys}
+                  onChange={onSelectProductItineraries}
                   options={productSelectOptions}
                   filterOption={(input, option) =>
-                    String(option?.searchText ?? "").includes(input.trim().toLowerCase())
+                    String((option as { searchText?: string })?.searchText ?? "").includes(
+                      input.trim().toLowerCase(),
+                    )
                   }
+                  maxTagCount="responsive"
                   suffixIcon={<SearchOutlined />}
-                  placeholder="输入产品代码、产品名称或业务类型"
+                  placeholder="输入产品代码、产品名称、行程代码或行程名称"
                   className="full-width control-input"
-                />
-              </div>
-
-              <div>
-                <Text strong>行程</Text>
-                <Select
-                  aria-label="行程"
-                  value={selectedItineraryCode}
-                  onChange={onSelectItinerary}
-                  placeholder="选择该产品下的行程"
-                  className="full-width control-input"
-                  options={itineraryOptions.map((product) => ({
-                    value: product.itineraryCode,
-                    label: `${product.itineraryCode} / ${product.itineraryName} / ${getItineraryShortCode(product)}`,
-                  }))}
                 />
               </div>
 
@@ -150,7 +142,7 @@ export function AutoOpeningPage({
         <Col xs={24} lg={14}>
           <Row gutter={[16, 16]}>
             <Col xs={12} xl={6}>
-              <MetricCard title="当前行程" value={selectedProduct ? 1 : 0} suffix="条" />
+              <MetricCard title="当前行程" value={selectedProducts.length} suffix="条" />
             </Col>
             <Col xs={12} xl={6}>
               <MetricCard
@@ -181,121 +173,98 @@ export function AutoOpeningPage({
             className="rule-alert"
             type="info"
             showIcon
-            title={`公共池最多使用 ${Math.round(config.baseRoomMaxUsageRatio * 100)}%，高级房型会触发涨价，第一版只标记不足。`}
+            title="库存校验按公共池全量判断；高级房型会触发涨价，基本盘第一版只使用基础房型。"
           />
         </Col>
       </Row>
 
-      {selectedProduct ? (
+      {selectedProducts.length > 0 ? (
         <Row gutter={[16, 16]}>
-          <Col xs={24} xl={16}>
-            <Card
-              title={
-                <Space wrap>
-                  <span>{selectedProduct.productName}</span>
-                  <Tag color="blue">{selectedProduct.businessType}</Tag>
-                </Space>
-              }
-            >
-              <Descriptions column={{ xs: 1, md: 3 }} size="small" className="section-gap">
-                <Descriptions.Item label="产品">{selectedProduct.productCode}</Descriptions.Item>
-                <Descriptions.Item label="行程">{selectedProduct.itineraryCode}</Descriptions.Item>
-                <Descriptions.Item label="行程名称">{selectedProduct.itineraryName}</Descriptions.Item>
-                <Descriptions.Item label="行程天数">{selectedProduct.tripDays} 天</Descriptions.Item>
-                <Descriptions.Item label="酒店简称">
-                  {getItineraryShortCode(selectedProduct)}
-                </Descriptions.Item>
-                <Descriptions.Item label="默认规模">
-                  {selectedProductConfig
-                    ? `${selectedProductConfig.defaultGroupSize} 人 / ${selectedProductConfig.defaultRoomCount} 间`
-                    : "未配置"}
-                </Descriptions.Item>
-              </Descriptions>
+          {selectedProducts.map((product) => {
+            const productConfig = getProductConfig(productOpeningConfigs, product.productCode);
 
-              <Table
-                rowKey={(record) => `${selectedProduct.itineraryCode}-${record.dayIndex}`}
-                size="small"
-                pagination={false}
-                dataSource={selectedProduct.dailyItinerary}
-                columns={[
-                  {
-                    title: "天数",
-                    dataIndex: "dayIndex",
-                    width: 80,
-                    render: (dayIndex: number) => <Tag>D{dayIndex}</Tag>,
-                  },
-                  {
-                    title: "酒店",
-                    dataIndex: "hotelName",
-                    render: (_: string, record) => (
-                      <Space orientation="vertical" size={0}>
-                        <Text>{record.hotelName}</Text>
-                        <Text type="secondary">{record.hotelCode}</Text>
-                      </Space>
-                    ),
-                  },
-                  {
-                    title: "简称",
-                    dataIndex: "hotelShortName",
-                    width: 90,
-                  },
-                  {
-                    title: "每日活动",
-                    dataIndex: "activityName",
-                  },
-                ]}
-              />
-            </Card>
-          </Col>
-
-          <Col xs={24} xl={8}>
-            <Card title="本产品开团配置">
-              {selectedProductConfig ? (
-                <Space orientation="vertical" size={14} className="full-width">
-                  <Descriptions column={1} size="small">
-                    <Descriptions.Item label="是否参与基本盘">
-                      {selectedProductConfig.enabled ? <Tag color="green">是</Tag> : <Tag>否</Tag>}
+            return (
+              <Col xs={24} xl={12} key={getProductItineraryKey(product)}>
+                <Card
+                  title={
+                    <Space wrap>
+                      <span>{product.productName}</span>
+                      <Tag color="blue">{product.businessType}</Tag>
+                    </Space>
+                  }
+                >
+                  <Descriptions column={{ xs: 1, md: 2 }} size="small" className="section-gap">
+                    <Descriptions.Item label="产品">{product.productCode}</Descriptions.Item>
+                    <Descriptions.Item label="行程">{product.itineraryCode}</Descriptions.Item>
+                    <Descriptions.Item label="行程名称">{product.itineraryName}</Descriptions.Item>
+                    <Descriptions.Item label="行程天数">{product.tripDays} 天</Descriptions.Item>
+                    <Descriptions.Item label="酒店简称">
+                      {getItineraryShortCode(product)}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="默认规模">
+                      {productConfig
+                        ? `${productConfig.defaultGroupSize} 人 / ${productConfig.defaultRoomCount} 间`
+                        : "未配置"}
                     </Descriptions.Item>
                     <Descriptions.Item label="开团频次">
-                      {getFrequencyLabel(
-                        config.businessFrequencyRules,
-                        selectedProductConfig.frequencyRuleId,
-                      )}
+                      {productConfig
+                        ? getFrequencyLabel(config.businessFrequencyRules, productConfig.frequencyRuleId)
+                        : "未配置"}
                     </Descriptions.Item>
                     <Descriptions.Item label="出发日限制">
-                      {selectedProductConfig.allowedDepartureRule.description}
+                      {productConfig?.allowedDepartureRule.description ?? "未配置"}
                     </Descriptions.Item>
                     <Descriptions.Item label="首选/次选发团日">
-                      {selectedProductConfig.preferredWeekdays.length > 0
-                        ? formatWeekdays(selectedProductConfig.preferredWeekdays)
+                      {productConfig && productConfig.preferredWeekdays.length > 0
+                        ? formatWeekdays(productConfig.preferredWeekdays)
                         : "不配置"}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="参与基本盘">
+                      {productConfig?.enabled ? <Tag color="green">是</Tag> : <Tag>否</Tag>}
                     </Descriptions.Item>
                   </Descriptions>
 
-                  <div className="preference-list">
-                    <Text strong>房型偏好</Text>
-                    {selectedProductConfig.roomTypePreferences.map((preference) => (
-                      <div
-                        className="preference-item"
-                        key={`${preference.hotelCode}-${preference.roomTypeCode ?? preference.roomClass}`}
-                      >
-                        <Text strong>{preference.hotelCode}</Text>
-                        <Text type="secondary">
-                          {preference.roomTypeCode ?? preference.roomClass} / {preference.description}
-                        </Text>
-                      </div>
-                    ))}
-                  </div>
-                </Space>
-              ) : (
-                <Alert type="error" showIcon title="未找到该产品的基本盘开团配置。" />
-              )}
-            </Card>
-          </Col>
+                  <Table
+                    rowKey={(record) => `${product.itineraryCode}-${record.dayIndex}`}
+                    size="small"
+                    pagination={false}
+                    dataSource={product.dailyItinerary}
+                    columns={[
+                      {
+                        title: "天数",
+                        dataIndex: "dayIndex",
+                        width: 70,
+                        render: (dayIndex: number) => <Tag>D{dayIndex}</Tag>,
+                      },
+                      {
+                        title: "酒店",
+                        dataIndex: "hotelName",
+                        render: (_: string, record) => (
+                          <Space orientation="vertical" size={0}>
+                            <Text>{record.hotelName}</Text>
+                            <Text type="secondary">{record.hotelCode}</Text>
+                          </Space>
+                        ),
+                      },
+                      {
+                        title: "简称",
+                        dataIndex: "hotelShortName",
+                        width: 70,
+                      },
+                      {
+                        title: "每日活动",
+                        dataIndex: "activityName",
+                      },
+                    ]}
+                  />
+                </Card>
+              </Col>
+            );
+          })}
         </Row>
       ) : (
         <Card>
-          <Empty description="请选择产品和行程" />
+          <Empty description="请选择一个或多个产品行程" />
         </Card>
       )}
     </Space>
@@ -326,6 +295,14 @@ function MetricCard({
       />
     </Card>
   );
+}
+
+function getProductConfig(configs: ProductOpeningConfig[], productCode: string) {
+  return configs.find((openingConfig) => openingConfig.productCode === productCode) ?? null;
+}
+
+function getProductItineraryKey(product: Product): string {
+  return `${product.productCode}|${product.itineraryCode}`;
 }
 
 function getFrequencyLabel(rules: BusinessFrequencyRule[], ruleId: string) {

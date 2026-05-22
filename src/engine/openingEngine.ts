@@ -30,6 +30,18 @@ export function generateMonthDates(year: number, month: number): string[] {
   );
 }
 
+export function generateDateRangeDates(startDate: string, endDate: string): string[] {
+  const dates: string[] = [];
+  let cursor = startDate;
+
+  while (cursor <= endDate) {
+    dates.push(cursor);
+    cursor = addDays(cursor, 1);
+  }
+
+  return dates;
+}
+
 export function generateCandidateDepartureDates(
   _product: Product,
   monthDates: string[],
@@ -227,7 +239,7 @@ export function checkInventoryAvailability(
     const publicPool = inventorySnapshot?.publicPool ?? usage.publicPool;
     const usedRooms = getInventoryUsedRooms(inventorySnapshot);
     const lockedRooms = lockedInventory[key]?.quantity ?? 0;
-    const availableLimit = Math.floor(publicPool * config.baseRoomMaxUsageRatio);
+    const availableLimit = publicPool;
     const requestedRooms = usage.quantity;
 
     if (usedRooms + lockedRooms + requestedRooms > availableLimit) {
@@ -242,7 +254,7 @@ export function checkInventoryAvailability(
         usedRooms,
         lockedRooms,
         availableLimit,
-        reason: `${usage.date} ${usage.hotelName} ${usage.roomTypeName} 需 ${requestedRooms} 间，库存占用 ${usedRooms} 间，本轮已锁 ${lockedRooms} 间，公共池 90% 上限 ${availableLimit} 间；高级房型会触发团期涨价，基本盘第一版不自动切换`,
+        reason: `${usage.date} ${usage.hotelName} ${usage.roomTypeName} 需 ${requestedRooms} 间，库存占用 ${usedRooms} 间，本轮已锁 ${lockedRooms} 间，公共池可用 ${availableLimit} 间；高级房型会触发团期涨价，基本盘第一版不自动切换`,
       });
     }
   });
@@ -296,11 +308,16 @@ export function generateOpeningPlans(params: {
   hotels: Hotel[];
   inventory: InventoryItem[];
   config: StrategyConfig;
-  year: number;
-  month: number;
+  year?: number;
+  month?: number;
+  startDate?: string;
+  endDate?: string;
 }): GenerateOpeningResult {
-  const { products, productOpeningConfigs, hotels, inventory, config, year, month } = params;
-  const monthDates = generateMonthDates(year, month);
+  const { products, productOpeningConfigs, hotels, inventory, config } = params;
+  const monthDates =
+    params.startDate && params.endDate
+      ? generateDateRangeDates(params.startDate, params.endDate)
+      : generateMonthDates(params.year ?? 2026, params.month ?? 6);
   const configsByProductCode = new Map(
     productOpeningConfigs.map((openingConfig) => [openingConfig.productCode, openingConfig]),
   );
@@ -421,7 +438,7 @@ export function generateOpeningPlans(params: {
             departureDate,
             planSequence: planSequence++,
             status: "可开团",
-            reason: "基础房型资源满足公共池 90% 可用上限",
+            reason: "基础房型公共池资源满足本次计划占用",
             resourceUsage: resolvedResource.resourceUsage,
           }),
         );
@@ -540,7 +557,7 @@ function buildInventoryRows(
       const publicPool = inventorySnapshot?.publicPool ?? usage.publicPool;
       const usedRooms = getInventoryUsedRooms(inventorySnapshot);
       const plannedRooms = usage.quantity;
-      const availableLimit = Math.floor(publicPool * config.baseRoomMaxUsageRatio);
+      const availableLimit = publicPool;
       const occupancyRate = publicPool === 0 ? 0 : (usedRooms + plannedRooms) / publicPool;
 
       return {

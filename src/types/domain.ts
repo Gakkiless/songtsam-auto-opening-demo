@@ -88,7 +88,6 @@ export interface BusinessFrequencyRule {
 }
 
 export interface StrategyConfig {
-  baseRoomMaxUsageRatio: number;
   businessFrequencyRules: BusinessFrequencyRule[];
   roomLevelPriority: RoomLevel[];
   autoUseAdvancedRoom: boolean;

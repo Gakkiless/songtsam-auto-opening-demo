@@ -88,7 +88,7 @@ export function InventoryPage({ rows }: { rows: InventoryViewRow[] }) {
       render: (value: number) => <Text strong>{value}</Text>,
     },
     {
-      title: "可用上限",
+      title: "可用库存",
       dataIndex: "availableLimit",
       width: 100,
       align: "right",
@@ -102,7 +102,7 @@ export function InventoryPage({ rows }: { rows: InventoryViewRow[] }) {
           <Progress
             percent={Math.round(value * 100)}
             size="small"
-            status={value >= 0.9 ? "exception" : "active"}
+            status={value > 1 ? "exception" : "active"}
           />
           <Text type="secondary">{formatPercent(value)}</Text>
         </Space>
