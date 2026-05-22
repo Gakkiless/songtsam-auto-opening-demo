@@ -5,24 +5,33 @@ import {
   DashboardOutlined,
   FileDoneOutlined,
   FileTextOutlined,
+  SettingOutlined,
   TableOutlined,
 } from "@ant-design/icons";
 import { ConfigProvider, Layout, Segmented, Space, Tag, Typography, theme } from "antd";
 import {
   hotels,
   inventory,
-  productOpeningConfigs,
+  productOpeningConfigs as initialProductOpeningConfigs,
   products,
-  strategyConfig,
+  strategyConfig as initialStrategyConfig,
 } from "./config/data";
 import { generateOpeningPayload, generateOpeningPlans } from "./engine/openingEngine";
 import { AutoOpeningPage } from "./pages/AutoOpeningPage";
 import { InventoryPage } from "./pages/InventoryPage";
 import { OpeningPlanPage } from "./pages/OpeningPlanPage";
 import { PayloadPage } from "./pages/PayloadPage";
-import type { GenerateOpeningResult, OpeningPayload, Product } from "./types/domain";
+import { RuleConfigPage } from "./pages/RuleConfigPage";
+import type {
+  BusinessFrequencyRule,
+  GenerateOpeningResult,
+  OpeningPayload,
+  Product,
+  ProductOpeningConfig,
+  StrategyConfig,
+} from "./types/domain";
 
-type TabKey = "home" | "plans" | "inventory" | "payload";
+type TabKey = "home" | "config" | "plans" | "inventory" | "payload";
 
 export interface ProductOption {
   productCode: string;
@@ -36,6 +45,7 @@ const { Text, Title } = Typography;
 
 const tabs = [
   { value: "home" as const, label: "自动开团", icon: <DashboardOutlined /> },
+  { value: "config" as const, label: "规则配置", icon: <SettingOutlined /> },
   { value: "plans" as const, label: "待确认计划", icon: <FileDoneOutlined /> },
   { value: "inventory" as const, label: "酒店资源占用表", icon: <TableOutlined /> },
   { value: "payload" as const, label: "Payload 预览", icon: <FileTextOutlined /> },
@@ -53,6 +63,12 @@ function App() {
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
   const [executedPayloads, setExecutedPayloads] = useState<OpeningPayload[]>([]);
   const [executionMessage, setExecutionMessage] = useState("");
+  const [openingStrategyConfig, setOpeningStrategyConfig] = useState<StrategyConfig>(() =>
+    cloneValue(initialStrategyConfig),
+  );
+  const [openingConfigs, setOpeningConfigs] = useState<ProductOpeningConfig[]>(() =>
+    cloneValue(initialProductOpeningConfigs),
+  );
 
   const allProductOptions = useMemo(() => buildProductOptions(products), []);
 
@@ -143,10 +159,10 @@ function App() {
     setSelectionError("");
     const nextResult = generateOpeningPlans({
       products: selectedProducts,
-      productOpeningConfigs,
+      productOpeningConfigs: openingConfigs,
       hotels,
       inventory,
-      config: strategyConfig,
+      config: openingStrategyConfig,
       startDate,
       endDate,
     });
@@ -186,6 +202,36 @@ function App() {
       `已模拟执行 ${payloadsToExecute.length} 条开团接口；真实系统会在这里重新校验库存并提交开团。`,
     );
     setActiveTab("payload");
+  };
+
+  const handleUpdateBusinessRule = (nextRule: BusinessFrequencyRule) => {
+    setOpeningStrategyConfig((currentConfig) => ({
+      ...currentConfig,
+      businessTypeOpeningRules: currentConfig.businessTypeOpeningRules.map((rule) =>
+        rule.businessType === nextRule.businessType ? nextRule : rule,
+      ),
+    }));
+    resetGeneratedState();
+  };
+
+  const handleUpdateStrategyConfig = (patch: Partial<StrategyConfig>) => {
+    setOpeningStrategyConfig((currentConfig) => ({
+      ...currentConfig,
+      ...patch,
+    }));
+    resetGeneratedState();
+  };
+
+  const handleUpdateProductOpeningConfig = (nextConfig: ProductOpeningConfig) => {
+    setOpeningConfigs((currentConfigs) =>
+      currentConfigs.map((openingConfig) =>
+        openingConfig.productCode === nextConfig.productCode &&
+        openingConfig.itineraryCode === nextConfig.itineraryCode
+          ? nextConfig
+          : openingConfig,
+      ),
+    );
+    resetGeneratedState();
   };
 
   return (
@@ -256,8 +302,8 @@ function App() {
               draftItineraryKey={draftItineraryKey}
               draftItineraryOptions={draftItineraryOptions}
               selectedProducts={selectedProducts}
-              productOpeningConfigs={productOpeningConfigs}
-              config={strategyConfig}
+              productOpeningConfigs={openingConfigs}
+              config={openingStrategyConfig}
               result={result}
               selectionError={selectionError}
               onDateRangeChange={handleDateRangeChange}
@@ -267,6 +313,16 @@ function App() {
               onRemoveAddedItinerary={handleRemoveAddedItinerary}
               onClearAddedItineraries={handleClearAddedItineraries}
               onGenerate={handleGenerate}
+            />
+          ) : null}
+
+          {activeTab === "config" ? (
+            <RuleConfigPage
+              config={openingStrategyConfig}
+              productOpeningConfigs={openingConfigs}
+              onUpdateBusinessRule={handleUpdateBusinessRule}
+              onUpdateProductOpeningConfig={handleUpdateProductOpeningConfig}
+              onUpdateStrategyConfig={handleUpdateStrategyConfig}
             />
           ) : null}
 
@@ -295,6 +351,10 @@ function App() {
 
 function getProductItineraryKey(product: Product): string {
   return `${product.productCode}|${product.itineraryCode}`;
+}
+
+function cloneValue<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
 function buildProductOptions(productItineraries: Product[]): ProductOption[] {
