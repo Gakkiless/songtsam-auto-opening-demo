@@ -14,6 +14,7 @@ import type {
   ProductOpeningConfig,
   ProductRoomTypePreference,
   ResolvedResourceUsage,
+  ResolvedOpeningConfig,
   RoomLevel,
   RoomTypeChoice,
   RuleCheckResult,
@@ -45,23 +46,24 @@ export function generateDateRangeDates(startDate: string, endDate: string): stri
 export function generateCandidateDepartureDates(
   _product: Product,
   monthDates: string[],
-  frequencyRule: BusinessFrequencyRule,
-  openingConfig?: ProductOpeningConfig,
+  openingConfig: ResolvedOpeningConfig,
 ): string[] {
-  if (frequencyRule.frequencyType === "daily") {
+  if (openingConfig.frequencyType === "daily") {
     return monthDates;
   }
 
-  if (frequencyRule.frequencyType === "intervalDays") {
-    const intervalDays = frequencyRule.intervalDays ?? 1;
+  if (openingConfig.frequencyType === "intervalDays") {
+    const intervalDays = openingConfig.intervalDays ?? 1;
     return monthDates.filter((_, index) => index % intervalDays === 0);
   }
 
-  if (frequencyRule.frequencyType === "weekly") {
+  if (openingConfig.frequencyType === "weekly") {
+    const candidateWeekdays = [
+      ...openingConfig.preferredWeekdays,
+      ...openingConfig.fallbackWeekdays,
+    ];
     const preferredWeekdays =
-      openingConfig && openingConfig.preferredWeekdays.length > 0
-        ? openingConfig.preferredWeekdays
-        : frequencyRule.weekdays ?? [6];
+      candidateWeekdays.length > 0 ? candidateWeekdays : openingConfig.weekdays ?? [6];
     const datesByWeek = new Map<number, string[]>();
     const firstMonthWeekday = getWeekday(monthDates[0]);
     const firstWeekOffsetFromMonday = (firstMonthWeekday + 6) % 7;
@@ -89,7 +91,7 @@ export function generateCandidateDepartureDates(
 }
 
 export function checkAllowedDepartureRule(
-  openingConfig: ProductOpeningConfig,
+  openingConfig: ResolvedOpeningConfig,
   date: string,
 ): RuleCheckResult {
   const rule = openingConfig.allowedDepartureRule;
@@ -128,7 +130,7 @@ export function checkAllowedDepartureRule(
 export function calculateItineraryResourceUsage(
   product: Product,
   departureDate: string,
-  openingConfig: ProductOpeningConfig,
+  openingConfig: ResolvedOpeningConfig,
 ): ItineraryResourceRequirement[] {
   const stayDays = [...product.dailyItinerary].sort((a, b) => a.dayIndex - b.dayIndex);
   const requirements: ItineraryResourceRequirement[] = [];
@@ -318,17 +320,18 @@ export function generateOpeningPlans(params: {
     params.startDate && params.endDate
       ? generateDateRangeDates(params.startDate, params.endDate)
       : generateMonthDates(params.year ?? 2026, params.month ?? 6);
-  const configsByProductCode = new Map(
-    productOpeningConfigs.map((openingConfig) => [openingConfig.productCode, openingConfig]),
-  );
   const lockedInventory: LockedInventory = {};
   const openingPlans: OpeningPlan[] = [];
   let planSequence = 1;
 
   products.forEach((product) => {
-    const openingConfig = configsByProductCode.get(product.productCode);
+    const resolvedConfig = resolveOpeningConfig(
+      product,
+      productOpeningConfigs,
+      config.businessTypeOpeningRules,
+    );
 
-    if (!openingConfig) {
+    if (!resolvedConfig.openingConfig) {
       openingPlans.push(
         createOpeningPlan({
           product,
@@ -336,38 +339,20 @@ export function generateOpeningPlans(params: {
           departureDate: monthDates[0],
           planSequence: planSequence++,
           status: "规则冲突",
-          reason: `未找到产品 ${product.productCode} 的开团配置`,
+          reason: resolvedConfig.reason,
           resourceUsage: [],
         }),
       );
       return;
     }
+
+    const openingConfig = resolvedConfig.openingConfig;
 
     if (!openingConfig.enabled) return;
-
-    const frequencyRule = config.businessFrequencyRules.find(
-      (rule) => rule.ruleId === openingConfig.frequencyRuleId,
-    );
-
-    if (!frequencyRule) {
-      openingPlans.push(
-        createOpeningPlan({
-          product,
-          openingConfig,
-          departureDate: monthDates[0],
-          planSequence: planSequence++,
-          status: "规则冲突",
-          reason: `未找到频次规则 ${openingConfig.frequencyRuleId}`,
-          resourceUsage: [],
-        }),
-      );
-      return;
-    }
 
     const candidateDates = generateCandidateDepartureDates(
       product,
       monthDates,
-      frequencyRule,
       openingConfig,
     );
 
@@ -389,7 +374,7 @@ export function generateOpeningPlans(params: {
         return;
       }
 
-      if (frequencyRule.skipInventoryLock) {
+      if (openingConfig.skipInventoryLock) {
         openingPlans.push(
           createOpeningPlan({
             product,
@@ -473,6 +458,74 @@ export function generateOpeningPlans(params: {
 
 export function getItineraryShortCode(product: Product): string {
   return product.dailyItinerary.map((day) => day.hotelShortName).join("");
+}
+
+export function resolveOpeningConfig(
+  product: Product,
+  productOpeningConfigs: ProductOpeningConfig[],
+  businessTypeOpeningRules: BusinessFrequencyRule[],
+): { openingConfig: ResolvedOpeningConfig | null; reason: string } {
+  const businessRule = businessTypeOpeningRules.find(
+    (rule) => rule.businessType === product.businessType,
+  );
+
+  if (!businessRule) {
+    return {
+      openingConfig: null,
+      reason: `未找到业务类型 ${product.businessType} 的开团规则配置`,
+    };
+  }
+
+  if (!businessRule.enabled) {
+    return {
+      openingConfig: null,
+      reason: `业务类型 ${product.businessType} 未启用自动开团`,
+    };
+  }
+
+  const productConfig =
+    productOpeningConfigs.find(
+      (openingConfig) =>
+        openingConfig.productCode === product.productCode &&
+        openingConfig.itineraryCode === product.itineraryCode,
+    ) ??
+    productOpeningConfigs.find(
+      (openingConfig) =>
+        openingConfig.productCode === product.productCode && !openingConfig.itineraryCode,
+    );
+
+  if (!productConfig) {
+    return {
+      openingConfig: null,
+      reason: `未找到产品 ${product.productCode} 的开团配置`,
+    };
+  }
+
+  const overrideRule = productConfig.overrideRule ?? {};
+
+  return {
+    openingConfig: {
+      productCode: product.productCode,
+      itineraryCode: productConfig.itineraryCode,
+      enabled: productConfig.enabled ?? businessRule.enabled,
+      defaultGroupSize: productConfig.defaultGroupSize,
+      defaultRoomCount: productConfig.defaultRoomCount,
+      frequencyType: overrideRule.frequencyType ?? businessRule.frequencyType,
+      weekdays: overrideRule.weekdays ?? businessRule.weekdays,
+      intervalDays: overrideRule.intervalDays ?? businessRule.intervalDays,
+      allowedDepartureRule:
+        overrideRule.allowedDepartureRule ?? businessRule.allowedDepartureRule,
+      preferredWeekdays: overrideRule.preferredWeekdays ?? businessRule.preferredWeekdays,
+      fallbackWeekdays: overrideRule.fallbackWeekdays ?? businessRule.fallbackWeekdays,
+      skipInventoryLock:
+        overrideRule.skipInventoryLock ?? businessRule.skipInventoryLock ?? false,
+      ruleLabel: productConfig.overrideRule
+        ? `${businessRule.label} / 产品行程覆盖`
+        : businessRule.label,
+      roomTypePreferences: productConfig.roomTypePreferences,
+    },
+    reason: "已合并业务类型和产品行程开团配置",
+  };
 }
 
 function resolveResourceUsage(
@@ -591,7 +644,7 @@ function buildInventoryRows(
 
 function createOpeningPlan(params: {
   product: Product;
-  openingConfig: ProductOpeningConfig | null;
+  openingConfig: ResolvedOpeningConfig | null;
   departureDate: string;
   planSequence: number;
   status: OpeningPlan["status"];

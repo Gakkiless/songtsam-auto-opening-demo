@@ -1,34 +1,60 @@
 {
-  "businessFrequencyRules": [
+  "businessTypeOpeningRules": [
     {
-      "ruleId": "FREQ-THEME-WEEKLY-SAT",
       "businessType": "主题团",
-      "label": "默认每周 1 团，周六发团",
+      "enabled": true,
+      "label": "每周 1 团，首选周六，次选周五",
       "frequencyType": "weekly",
       "weekdays": [6],
+      "allowedDepartureRule": {
+        "type": "weekdays",
+        "weekdays": [6],
+        "description": "默认只能周六出发"
+      },
+      "preferredWeekdays": [6],
+      "fallbackWeekdays": [5],
       "skipInventoryLock": false
     },
     {
-      "ruleId": "FREQ-FREE-EVERY-OTHER-DAY",
       "businessType": "自由行",
-      "label": "隔日开团",
+      "enabled": true,
+      "label": "隔日开团，不限制出发日",
       "frequencyType": "intervalDays",
       "intervalDays": 2,
+      "allowedDepartureRule": {
+        "type": "none",
+        "description": "不限出发日"
+      },
+      "preferredWeekdays": [],
+      "fallbackWeekdays": [],
       "skipInventoryLock": false
     },
     {
-      "ruleId": "FREQ-BUTLER-EVERY-THREE-DAYS",
       "businessType": "私享管家",
-      "label": "每 3 天开 1 团",
+      "enabled": true,
+      "label": "每 3 天 1 团，首选周四，次选周一",
       "frequencyType": "intervalDays",
       "intervalDays": 3,
+      "allowedDepartureRule": {
+        "type": "weekdays",
+        "weekdays": [1, 4],
+        "description": "默认仅周一、周四出发"
+      },
+      "preferredWeekdays": [4],
+      "fallbackWeekdays": [1],
       "skipInventoryLock": false
     },
     {
-      "ruleId": "FREQ-PACKAGE-DAILY",
       "businessType": "目的地套餐",
+      "enabled": true,
       "label": "每日开团，不预占酒店资源",
       "frequencyType": "daily",
+      "allowedDepartureRule": {
+        "type": "none",
+        "description": "不限出发日"
+      },
+      "preferredWeekdays": [],
+      "fallbackWeekdays": [],
       "skipInventoryLock": true
     }
   ],

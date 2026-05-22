@@ -25,9 +25,12 @@ import {
   Typography,
 } from "antd";
 import type { CSSProperties, ReactNode } from "react";
-import { formatWeekdays, getItineraryShortCode } from "../engine/openingEngine";
+import {
+  formatWeekdays,
+  getItineraryShortCode,
+  resolveOpeningConfig,
+} from "../engine/openingEngine";
 import type {
-  BusinessFrequencyRule,
   GenerateOpeningResult,
   Product,
   ProductOpeningConfig,
@@ -265,13 +268,53 @@ export function AutoOpeningPage({
             showIcon
             title="库存校验按公共池全量判断；高级房型会触发涨价，基本盘第一版只使用基础房型。"
           />
+
+          <Card title="业务类型默认规则" className="rule-config-card" size="small">
+            <Table
+              rowKey="businessType"
+              size="small"
+              pagination={false}
+              dataSource={config.businessTypeOpeningRules}
+              columns={[
+                {
+                  title: "业务类型",
+                  dataIndex: "businessType",
+                  width: 100,
+                  render: (businessType: string) => <Tag color="blue">{businessType}</Tag>,
+                },
+                {
+                  title: "频次",
+                  render: (_, rule) => formatFrequencyRule(rule),
+                },
+                {
+                  title: "出发日限制",
+                  render: (_, rule) => rule.allowedDepartureRule.description,
+                },
+                {
+                  title: "首选 / 次选",
+                  render: (_, rule) =>
+                    formatPreferredWeekdays(rule.preferredWeekdays, rule.fallbackWeekdays),
+                },
+                {
+                  title: "库存",
+                  width: 100,
+                  render: (_, rule) =>
+                    rule.skipInventoryLock ? <Tag>不预占</Tag> : <Tag color="green">预占</Tag>,
+                },
+              ]}
+            />
+          </Card>
         </Col>
       </Row>
 
       {selectedProducts.length > 0 ? (
         <Row gutter={[16, 16]}>
           {selectedProducts.map((product) => {
-            const productConfig = getProductConfig(productOpeningConfigs, product.productCode);
+            const resolvedOpeningConfig = resolveOpeningConfig(
+              product,
+              productOpeningConfigs,
+              config.businessTypeOpeningRules,
+            ).openingConfig;
 
             return (
               <Col xs={24} xl={12} key={getProductItineraryKey(product)}>
@@ -292,25 +335,26 @@ export function AutoOpeningPage({
                       {getItineraryShortCode(product)}
                     </Descriptions.Item>
                     <Descriptions.Item label="默认规模">
-                      {productConfig
-                        ? `${productConfig.defaultGroupSize} 人 / ${productConfig.defaultRoomCount} 间`
+                      {resolvedOpeningConfig
+                        ? `${resolvedOpeningConfig.defaultGroupSize} 人 / ${resolvedOpeningConfig.defaultRoomCount} 间`
                         : "未配置"}
                     </Descriptions.Item>
                     <Descriptions.Item label="开团频次">
-                      {productConfig
-                        ? getFrequencyLabel(config.businessFrequencyRules, productConfig.frequencyRuleId)
-                        : "未配置"}
+                      {resolvedOpeningConfig ? getFrequencyLabel(resolvedOpeningConfig) : "未配置"}
                     </Descriptions.Item>
                     <Descriptions.Item label="出发日限制">
-                      {productConfig?.allowedDepartureRule.description ?? "未配置"}
+                      {resolvedOpeningConfig?.allowedDepartureRule.description ?? "未配置"}
                     </Descriptions.Item>
                     <Descriptions.Item label="首选/次选发团日">
-                      {productConfig && productConfig.preferredWeekdays.length > 0
-                        ? formatWeekdays(productConfig.preferredWeekdays)
+                      {resolvedOpeningConfig
+                        ? formatPreferredWeekdays(
+                            resolvedOpeningConfig.preferredWeekdays,
+                            resolvedOpeningConfig.fallbackWeekdays,
+                          )
                         : "不配置"}
                     </Descriptions.Item>
                     <Descriptions.Item label="参与基本盘">
-                      {productConfig?.enabled ? <Tag color="green">是</Tag> : <Tag>否</Tag>}
+                      {resolvedOpeningConfig?.enabled ? <Tag color="green">是</Tag> : <Tag>否</Tag>}
                     </Descriptions.Item>
                   </Descriptions>
 
@@ -387,14 +431,39 @@ function MetricCard({
   );
 }
 
-function getProductConfig(configs: ProductOpeningConfig[], productCode: string) {
-  return configs.find((openingConfig) => openingConfig.productCode === productCode) ?? null;
-}
-
 function getProductItineraryKey(product: Product): string {
   return `${product.productCode}|${product.itineraryCode}`;
 }
 
-function getFrequencyLabel(rules: BusinessFrequencyRule[], ruleId: string) {
-  return rules.find((rule) => rule.ruleId === ruleId)?.label ?? `未找到频次规则 ${ruleId}`;
+function getFrequencyLabel(config: {
+  ruleLabel: string;
+  frequencyType: string;
+  intervalDays?: number;
+}) {
+  if (config.frequencyType === "intervalDays") {
+    return `${config.ruleLabel} / 每 ${config.intervalDays ?? 1} 天`;
+  }
+
+  return config.ruleLabel;
+}
+
+function formatFrequencyRule(rule: {
+  frequencyType: string;
+  intervalDays?: number;
+  weekdays?: number[];
+}) {
+  if (rule.frequencyType === "daily") return "每日";
+  if (rule.frequencyType === "intervalDays") return `每 ${rule.intervalDays ?? 1} 天`;
+  if (rule.frequencyType === "weekly") {
+    return `每周 ${rule.weekdays && rule.weekdays.length > 0 ? formatWeekdays(rule.weekdays) : "配置日"}`;
+  }
+
+  return "未配置";
+}
+
+function formatPreferredWeekdays(preferredWeekdays: number[], fallbackWeekdays: number[]) {
+  const preferredLabel = preferredWeekdays.length > 0 ? formatWeekdays(preferredWeekdays) : "不配置";
+  const fallbackLabel = fallbackWeekdays.length > 0 ? formatWeekdays(fallbackWeekdays) : "不配置";
+
+  return `首选 ${preferredLabel} / 次选 ${fallbackLabel}`;
 }

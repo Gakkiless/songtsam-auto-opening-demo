@@ -35,14 +35,23 @@ export interface ProductRoomTypePreference {
   description: string;
 }
 
+export interface OpeningRuleOverride {
+  frequencyType?: FrequencyType;
+  weekdays?: number[];
+  intervalDays?: number;
+  allowedDepartureRule?: AllowedDepartureRule;
+  preferredWeekdays?: number[];
+  fallbackWeekdays?: number[];
+  skipInventoryLock?: boolean;
+}
+
 export interface ProductOpeningConfig {
   productCode: string;
-  enabled: boolean;
+  itineraryCode?: string;
+  enabled?: boolean;
   defaultGroupSize: number;
   defaultRoomCount: number;
-  frequencyRuleId: string;
-  allowedDepartureRule: AllowedDepartureRule;
-  preferredWeekdays: number[];
+  overrideRule?: OpeningRuleOverride;
   roomTypePreferences: ProductRoomTypePreference[];
 }
 
@@ -78,19 +87,39 @@ export interface InventoryItem {
 }
 
 export interface BusinessFrequencyRule {
-  ruleId: string;
   businessType: BusinessType;
+  enabled: boolean;
   label: string;
   frequencyType: FrequencyType;
   weekdays?: number[];
   intervalDays?: number;
+  allowedDepartureRule: AllowedDepartureRule;
+  preferredWeekdays: number[];
+  fallbackWeekdays: number[];
   skipInventoryLock?: boolean;
 }
 
 export interface StrategyConfig {
-  businessFrequencyRules: BusinessFrequencyRule[];
+  businessTypeOpeningRules: BusinessFrequencyRule[];
   roomLevelPriority: RoomLevel[];
   autoUseAdvancedRoom: boolean;
+}
+
+export interface ResolvedOpeningConfig {
+  productCode: string;
+  itineraryCode?: string;
+  enabled: boolean;
+  defaultGroupSize: number;
+  defaultRoomCount: number;
+  frequencyType: FrequencyType;
+  weekdays?: number[];
+  intervalDays?: number;
+  allowedDepartureRule: AllowedDepartureRule;
+  preferredWeekdays: number[];
+  fallbackWeekdays: number[];
+  skipInventoryLock: boolean;
+  ruleLabel: string;
+  roomTypePreferences: ProductRoomTypePreference[];
 }
 
 export interface ItineraryResourceRequirement {

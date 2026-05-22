@@ -4,13 +4,6 @@
     "enabled": true,
     "defaultGroupSize": 12,
     "defaultRoomCount": 6,
-    "frequencyRuleId": "FREQ-THEME-WEEKLY-SAT",
-    "allowedDepartureRule": {
-      "type": "weekdays",
-      "weekdays": [6],
-      "description": "只能周六出发"
-    },
-    "preferredWeekdays": [6, 5],
     "roomTypePreferences": [
       {
         "hotelCode": "H-XGLL",
@@ -39,12 +32,14 @@
     "enabled": true,
     "defaultGroupSize": 10,
     "defaultRoomCount": 5,
-    "frequencyRuleId": "FREQ-THEME-WEEKLY-SAT",
-    "allowedDepartureRule": {
-      "type": "evenDays",
-      "description": "只能双数日出发"
+    "overrideRule": {
+      "allowedDepartureRule": {
+        "type": "evenDays",
+        "description": "只能双数日出发"
+      },
+      "preferredWeekdays": [6],
+      "fallbackWeekdays": []
     },
-    "preferredWeekdays": [6],
     "roomTypePreferences": [
       {
         "hotelCode": "H-LS",
@@ -58,12 +53,6 @@
     "enabled": true,
     "defaultGroupSize": 4,
     "defaultRoomCount": 2,
-    "frequencyRuleId": "FREQ-FREE-EVERY-OTHER-DAY",
-    "allowedDepartureRule": {
-      "type": "none",
-      "description": "不限出发日"
-    },
-    "preferredWeekdays": [],
     "roomTypePreferences": [
       {
         "hotelCode": "H-XGLL",
@@ -82,13 +71,6 @@
     "enabled": true,
     "defaultGroupSize": 6,
     "defaultRoomCount": 3,
-    "frequencyRuleId": "FREQ-BUTLER-EVERY-THREE-DAYS",
-    "allowedDepartureRule": {
-      "type": "weekdays",
-      "weekdays": [1, 4],
-      "description": "仅周一、周四出发"
-    },
-    "preferredWeekdays": [4, 1],
     "roomTypePreferences": [
       {
         "hotelCode": "H-ML",
@@ -112,12 +94,6 @@
     "enabled": true,
     "defaultGroupSize": 2,
     "defaultRoomCount": 1,
-    "frequencyRuleId": "FREQ-PACKAGE-DAILY",
-    "allowedDepartureRule": {
-      "type": "none",
-      "description": "不限出发日"
-    },
-    "preferredWeekdays": [],
     "roomTypePreferences": [
       {
         "hotelCode": "H-LS",
