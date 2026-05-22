@@ -1,0 +1,268 @@
+[
+  {
+    "productCode": "P001",
+    "productName": "滇藏深度主题团",
+    "itineraryCode": "IT-XMMLB-7D",
+    "itineraryName": "香梅梅拉奔基础盘",
+    "businessType": "主题团",
+    "tripDays": 6,
+    "dailyItinerary": [
+      {
+        "dayIndex": 1,
+        "hotelCode": "H-XGLL",
+        "hotelName": "松赞香格里拉林卡",
+        "hotelShortName": "香",
+        "activityName": "香格里拉抵达与适应"
+      },
+      {
+        "dayIndex": 2,
+        "hotelCode": "H-ML",
+        "hotelName": "松赞梅里山居",
+        "hotelShortName": "梅",
+        "activityName": "梅里雪山观景"
+      },
+      {
+        "dayIndex": 3,
+        "hotelCode": "H-ML",
+        "hotelName": "松赞梅里山居",
+        "hotelShortName": "梅",
+        "activityName": "飞来寺与村落探访"
+      },
+      {
+        "dayIndex": 4,
+        "hotelCode": "H-LS",
+        "hotelName": "松赞拉萨林卡",
+        "hotelShortName": "拉",
+        "activityName": "拉萨城市文化体验"
+      },
+      {
+        "dayIndex": 5,
+        "hotelCode": "H-LS",
+        "hotelName": "松赞拉萨林卡",
+        "hotelShortName": "拉",
+        "activityName": "寺院与在地生活"
+      },
+      {
+        "dayIndex": 6,
+        "hotelCode": "H-BZL",
+        "hotelName": "松赞奔子栏山居",
+        "hotelShortName": "奔",
+        "activityName": "奔子栏峡谷与返程"
+      }
+    ]
+  },
+  {
+    "productCode": "P001",
+    "productName": "滇藏深度主题团",
+    "itineraryCode": "IT-XMX-4D",
+    "itineraryName": "香梅香短线基础盘",
+    "businessType": "主题团",
+    "tripDays": 4,
+    "dailyItinerary": [
+      {
+        "dayIndex": 1,
+        "hotelCode": "H-XGLL",
+        "hotelName": "松赞香格里拉林卡",
+        "hotelShortName": "香",
+        "activityName": "香格里拉抵达"
+      },
+      {
+        "dayIndex": 2,
+        "hotelCode": "H-ML",
+        "hotelName": "松赞梅里山居",
+        "hotelShortName": "梅",
+        "activityName": "梅里雪山观景"
+      },
+      {
+        "dayIndex": 3,
+        "hotelCode": "H-XGLL",
+        "hotelName": "松赞香格里拉林卡",
+        "hotelShortName": "香",
+        "activityName": "香格里拉返程"
+      },
+      {
+        "dayIndex": 4,
+        "hotelCode": "H-XGLL",
+        "hotelName": "松赞香格里拉林卡",
+        "hotelShortName": "香",
+        "activityName": "自由活动"
+      }
+    ]
+  },
+  {
+    "productCode": "P002",
+    "productName": "拉萨文化周末主题团 4日",
+    "itineraryCode": "IT-LLL-4D",
+    "itineraryName": "拉拉拉周末线",
+    "businessType": "主题团",
+    "tripDays": 3,
+    "dailyItinerary": [
+      {
+        "dayIndex": 1,
+        "hotelCode": "H-LS",
+        "hotelName": "松赞拉萨林卡",
+        "hotelShortName": "拉",
+        "activityName": "抵达拉萨"
+      },
+      {
+        "dayIndex": 2,
+        "hotelCode": "H-LS",
+        "hotelName": "松赞拉萨林卡",
+        "hotelShortName": "拉",
+        "activityName": "拉萨文化漫游"
+      },
+      {
+        "dayIndex": 3,
+        "hotelCode": "H-LS",
+        "hotelName": "松赞拉萨林卡",
+        "hotelShortName": "拉",
+        "activityName": "自由活动与送机"
+      }
+    ]
+  },
+  {
+    "productCode": "P003",
+    "productName": "香格里拉自由行",
+    "itineraryCode": "IT-XXMM-5D",
+    "itineraryName": "香香梅梅自由行",
+    "businessType": "自由行",
+    "tripDays": 4,
+    "dailyItinerary": [
+      {
+        "dayIndex": 1,
+        "hotelCode": "H-XGLL",
+        "hotelName": "松赞香格里拉林卡",
+        "hotelShortName": "香",
+        "activityName": "自由抵达"
+      },
+      {
+        "dayIndex": 2,
+        "hotelCode": "H-XGLL",
+        "hotelName": "松赞香格里拉林卡",
+        "hotelShortName": "香",
+        "activityName": "纳帕海自由活动"
+      },
+      {
+        "dayIndex": 3,
+        "hotelCode": "H-ML",
+        "hotelName": "松赞梅里山居",
+        "hotelShortName": "梅",
+        "activityName": "梅里转场"
+      },
+      {
+        "dayIndex": 4,
+        "hotelCode": "H-ML",
+        "hotelName": "松赞梅里山居",
+        "hotelShortName": "梅",
+        "activityName": "自由休整"
+      }
+    ]
+  },
+  {
+    "productCode": "P003",
+    "productName": "香格里拉自由行",
+    "itineraryCode": "IT-XBX-3D",
+    "itineraryName": "香奔香自由行",
+    "businessType": "自由行",
+    "tripDays": 3,
+    "dailyItinerary": [
+      {
+        "dayIndex": 1,
+        "hotelCode": "H-XGLL",
+        "hotelName": "松赞香格里拉林卡",
+        "hotelShortName": "香",
+        "activityName": "自由抵达"
+      },
+      {
+        "dayIndex": 2,
+        "hotelCode": "H-BZL",
+        "hotelName": "松赞奔子栏山居",
+        "hotelShortName": "奔",
+        "activityName": "奔子栏自由活动"
+      },
+      {
+        "dayIndex": 3,
+        "hotelCode": "H-XGLL",
+        "hotelName": "松赞香格里拉林卡",
+        "hotelShortName": "香",
+        "activityName": "香格里拉返程"
+      }
+    ]
+  },
+  {
+    "productCode": "P004",
+    "productName": "私享管家 梅里轻奢 6日",
+    "itineraryCode": "IT-MMBBX-6D",
+    "itineraryName": "梅梅奔奔香私享线",
+    "businessType": "私享管家",
+    "tripDays": 5,
+    "dailyItinerary": [
+      {
+        "dayIndex": 1,
+        "hotelCode": "H-ML",
+        "hotelName": "松赞梅里山居",
+        "hotelShortName": "梅",
+        "activityName": "梅里抵达"
+      },
+      {
+        "dayIndex": 2,
+        "hotelCode": "H-ML",
+        "hotelName": "松赞梅里山居",
+        "hotelShortName": "梅",
+        "activityName": "定制徒步"
+      },
+      {
+        "dayIndex": 3,
+        "hotelCode": "H-BZL",
+        "hotelName": "松赞奔子栏山居",
+        "hotelShortName": "奔",
+        "activityName": "峡谷转场"
+      },
+      {
+        "dayIndex": 4,
+        "hotelCode": "H-BZL",
+        "hotelName": "松赞奔子栏山居",
+        "hotelShortName": "奔",
+        "activityName": "定制晚餐"
+      },
+      {
+        "dayIndex": 5,
+        "hotelCode": "H-XGLL",
+        "hotelName": "松赞香格里拉林卡",
+        "hotelShortName": "香",
+        "activityName": "香格里拉返程"
+      }
+    ]
+  },
+  {
+    "productCode": "P005",
+    "productName": "目的地套餐 拉萨连住 3晚",
+    "itineraryCode": "IT-LLL-PKG",
+    "itineraryName": "拉拉拉目的地套餐",
+    "businessType": "目的地套餐",
+    "tripDays": 3,
+    "dailyItinerary": [
+      {
+        "dayIndex": 1,
+        "hotelCode": "H-LS",
+        "hotelName": "松赞拉萨林卡",
+        "hotelShortName": "拉",
+        "activityName": "自选抵达"
+      },
+      {
+        "dayIndex": 2,
+        "hotelCode": "H-LS",
+        "hotelName": "松赞拉萨林卡",
+        "hotelShortName": "拉",
+        "activityName": "酒店度假"
+      },
+      {
+        "dayIndex": 3,
+        "hotelCode": "H-LS",
+        "hotelName": "松赞拉萨林卡",
+        "hotelShortName": "拉",
+        "activityName": "自由退房"
+      }
+    ]
+  }
+]

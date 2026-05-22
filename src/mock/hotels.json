@@ -1,0 +1,114 @@
+[
+  {
+    "hotelCode": "H-XGLL",
+    "hotelName": "松赞香格里拉林卡",
+    "hotelShortName": "香",
+    "roomTypes": [
+      {
+        "roomTypeCode": "RT-XGLL-B-KING",
+        "roomTypeName": "香格里拉基础大床",
+        "roomClass": "大床",
+        "roomLevel": "基础",
+        "isAdvancedRoom": false
+      },
+      {
+        "roomTypeCode": "RT-XGLL-B-TWIN",
+        "roomTypeName": "香格里拉基础双床",
+        "roomClass": "双床",
+        "roomLevel": "基础",
+        "isAdvancedRoom": false
+      },
+      {
+        "roomTypeCode": "RT-XGLL-A-KING",
+        "roomTypeName": "香格里拉高级大床",
+        "roomClass": "大床",
+        "roomLevel": "高级",
+        "isAdvancedRoom": true
+      }
+    ]
+  },
+  {
+    "hotelCode": "H-ML",
+    "hotelName": "松赞梅里山居",
+    "hotelShortName": "梅",
+    "roomTypes": [
+      {
+        "roomTypeCode": "RT-ML-B-KING",
+        "roomTypeName": "梅里基础大床",
+        "roomClass": "大床",
+        "roomLevel": "基础",
+        "isAdvancedRoom": false
+      },
+      {
+        "roomTypeCode": "RT-ML-B-TWIN",
+        "roomTypeName": "梅里基础双床",
+        "roomClass": "双床",
+        "roomLevel": "基础",
+        "isAdvancedRoom": false
+      },
+      {
+        "roomTypeCode": "RT-ML-A-KING",
+        "roomTypeName": "梅里高级大床",
+        "roomClass": "大床",
+        "roomLevel": "高级",
+        "isAdvancedRoom": true
+      }
+    ]
+  },
+  {
+    "hotelCode": "H-LS",
+    "hotelName": "松赞拉萨林卡",
+    "hotelShortName": "拉",
+    "roomTypes": [
+      {
+        "roomTypeCode": "RT-LS-B-KING",
+        "roomTypeName": "拉萨基础大床",
+        "roomClass": "大床",
+        "roomLevel": "基础",
+        "isAdvancedRoom": false
+      },
+      {
+        "roomTypeCode": "RT-LS-B-TWIN",
+        "roomTypeName": "拉萨基础双床",
+        "roomClass": "双床",
+        "roomLevel": "基础",
+        "isAdvancedRoom": false
+      },
+      {
+        "roomTypeCode": "RT-LS-A-KING",
+        "roomTypeName": "拉萨高级大床",
+        "roomClass": "大床",
+        "roomLevel": "高级",
+        "isAdvancedRoom": true
+      }
+    ]
+  },
+  {
+    "hotelCode": "H-BZL",
+    "hotelName": "松赞奔子栏山居",
+    "hotelShortName": "奔",
+    "roomTypes": [
+      {
+        "roomTypeCode": "RT-BZL-B-KING",
+        "roomTypeName": "奔子栏基础大床",
+        "roomClass": "大床",
+        "roomLevel": "基础",
+        "isAdvancedRoom": false
+      },
+      {
+        "roomTypeCode": "RT-BZL-B-TWIN",
+        "roomTypeName": "奔子栏基础双床",
+        "roomClass": "双床",
+        "roomLevel": "基础",
+        "isAdvancedRoom": false
+      },
+      {
+        "roomTypeCode": "RT-BZL-A-TWIN",
+        "roomTypeName": "奔子栏高级双床",
+        "roomClass": "双床",
+        "roomLevel": "高级",
+        "isAdvancedRoom": true
+      }
+    ]
+  }
+]

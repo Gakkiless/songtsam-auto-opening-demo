@@ -1,0 +1,129 @@
+[
+  {
+    "productCode": "P001",
+    "enabled": true,
+    "defaultGroupSize": 12,
+    "defaultRoomCount": 6,
+    "frequencyRuleId": "FREQ-THEME-WEEKLY-SAT",
+    "allowedDepartureRule": {
+      "type": "weekdays",
+      "weekdays": [6],
+      "description": "只能周六出发"
+    },
+    "preferredWeekdays": [6, 5],
+    "roomTypePreferences": [
+      {
+        "hotelCode": "H-XGLL",
+        "roomClass": "双床",
+        "description": "主题团默认双床"
+      },
+      {
+        "hotelCode": "H-ML",
+        "roomClass": "双床",
+        "description": "主题团默认双床"
+      },
+      {
+        "hotelCode": "H-LS",
+        "roomTypeCode": "RT-LS-B-TWIN",
+        "description": "拉萨优先基础双床"
+      },
+      {
+        "hotelCode": "H-BZL",
+        "roomClass": "双床",
+        "description": "主题团默认双床"
+      }
+    ]
+  },
+  {
+    "productCode": "P002",
+    "enabled": true,
+    "defaultGroupSize": 10,
+    "defaultRoomCount": 5,
+    "frequencyRuleId": "FREQ-THEME-WEEKLY-SAT",
+    "allowedDepartureRule": {
+      "type": "evenDays",
+      "description": "只能双数日出发"
+    },
+    "preferredWeekdays": [6],
+    "roomTypePreferences": [
+      {
+        "hotelCode": "H-LS",
+        "roomTypeCode": "RT-LS-B-TWIN",
+        "description": "周末团优先拉萨基础双床"
+      }
+    ]
+  },
+  {
+    "productCode": "P003",
+    "enabled": true,
+    "defaultGroupSize": 4,
+    "defaultRoomCount": 2,
+    "frequencyRuleId": "FREQ-FREE-EVERY-OTHER-DAY",
+    "allowedDepartureRule": {
+      "type": "none",
+      "description": "不限出发日"
+    },
+    "preferredWeekdays": [],
+    "roomTypePreferences": [
+      {
+        "hotelCode": "H-XGLL",
+        "roomClass": "大床",
+        "description": "自由行默认基础大床"
+      },
+      {
+        "hotelCode": "H-ML",
+        "roomClass": "大床",
+        "description": "自由行默认基础大床"
+      }
+    ]
+  },
+  {
+    "productCode": "P004",
+    "enabled": true,
+    "defaultGroupSize": 6,
+    "defaultRoomCount": 3,
+    "frequencyRuleId": "FREQ-BUTLER-EVERY-THREE-DAYS",
+    "allowedDepartureRule": {
+      "type": "weekdays",
+      "weekdays": [1, 4],
+      "description": "仅周一、周四出发"
+    },
+    "preferredWeekdays": [4, 1],
+    "roomTypePreferences": [
+      {
+        "hotelCode": "H-ML",
+        "roomClass": "双床",
+        "description": "私享管家默认双床"
+      },
+      {
+        "hotelCode": "H-BZL",
+        "roomClass": "大床",
+        "description": "奔子栏默认大床"
+      },
+      {
+        "hotelCode": "H-XGLL",
+        "roomClass": "大床",
+        "description": "返程酒店默认大床"
+      }
+    ]
+  },
+  {
+    "productCode": "P005",
+    "enabled": true,
+    "defaultGroupSize": 2,
+    "defaultRoomCount": 1,
+    "frequencyRuleId": "FREQ-PACKAGE-DAILY",
+    "allowedDepartureRule": {
+      "type": "none",
+      "description": "不限出发日"
+    },
+    "preferredWeekdays": [],
+    "roomTypePreferences": [
+      {
+        "hotelCode": "H-LS",
+        "roomClass": "大床",
+        "description": "目的地套餐默认基础大床"
+      }
+    ]
+  }
+]

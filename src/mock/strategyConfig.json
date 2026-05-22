@@ -1,0 +1,38 @@
+{
+  "baseRoomMaxUsageRatio": 0.9,
+  "businessFrequencyRules": [
+    {
+      "ruleId": "FREQ-THEME-WEEKLY-SAT",
+      "businessType": "主题团",
+      "label": "默认每周 1 团，周六发团",
+      "frequencyType": "weekly",
+      "weekdays": [6],
+      "skipInventoryLock": false
+    },
+    {
+      "ruleId": "FREQ-FREE-EVERY-OTHER-DAY",
+      "businessType": "自由行",
+      "label": "隔日开团",
+      "frequencyType": "intervalDays",
+      "intervalDays": 2,
+      "skipInventoryLock": false
+    },
+    {
+      "ruleId": "FREQ-BUTLER-EVERY-THREE-DAYS",
+      "businessType": "私享管家",
+      "label": "每 3 天开 1 团",
+      "frequencyType": "intervalDays",
+      "intervalDays": 3,
+      "skipInventoryLock": false
+    },
+    {
+      "ruleId": "FREQ-PACKAGE-DAILY",
+      "businessType": "目的地套餐",
+      "label": "每日开团，不预占酒店资源",
+      "frequencyType": "daily",
+      "skipInventoryLock": true
+    }
+  ],
+  "roomLevelPriority": ["基础"],
+  "autoUseAdvancedRoom": false
+}
