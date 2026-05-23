@@ -199,15 +199,16 @@ function App() {
     setActiveTab("executions");
   };
 
-  const handleExportExecutionHistory = () => {
-    if (executionHistory.length === 0) return;
+  const handleExportExecutionBatch = (batchId: string) => {
+    const batchRecords = executionHistory.filter((record) => record.batchId === batchId);
+    if (batchRecords.length === 0) return;
 
-    const csv = toExecutionCsv(executionHistory);
+    const csv = toExecutionCsv(batchRecords);
     const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `songtsam-opening-history-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `songtsam-opening-${batchId}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -320,7 +321,7 @@ function App() {
             <ExecutionResultPage
               records={executionHistory}
               latestBatchId={latestBatchId}
-              onExport={handleExportExecutionHistory}
+              onExportBatch={handleExportExecutionBatch}
             />
           ) : null}
           {activeTab === "inventory" ? <InventoryPage rows={result?.inventoryRows ?? []} /> : null}

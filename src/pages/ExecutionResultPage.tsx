@@ -13,11 +13,11 @@ const { Text } = Typography;
 export function ExecutionResultPage({
   records,
   latestBatchId,
-  onExport,
+  onExportBatch,
 }: {
   records: OpeningExecutionRecord[];
   latestBatchId: string;
-  onExport: () => void;
+  onExportBatch: (batchId: string) => void;
 }) {
   if (records.length === 0) {
     return (
@@ -32,11 +32,9 @@ export function ExecutionResultPage({
     : [];
   const successCount = latestRecords.filter((record) => record.status === "开团成功").length;
   const failedCount = latestRecords.filter((record) => record.status === "开团失败").length;
-  const sortedRecords = [...records].sort((a, b) =>
-    `${b.executedAt}-${b.departureDate}`.localeCompare(`${a.executedAt}-${a.departureDate}`),
-  );
+  const batches = buildExecutionBatches(records);
 
-  const columns: ColumnsType<OpeningExecutionRecord> = [
+  const batchColumns: ColumnsType<OpeningExecutionBatch> = [
     {
       title: "执行时间",
       dataIndex: "executedAt",
@@ -50,6 +48,42 @@ export function ExecutionResultPage({
       width: 150,
       render: (value: string) => <Text code>{value}</Text>,
     },
+    {
+      title: "执行结果",
+      dataIndex: "totalCount",
+      width: 220,
+      render: (_: number, batch) => (
+        <Space wrap size={[4, 4]}>
+          <Tag>{batch.totalCount} 个团期</Tag>
+          <Tag color="success">成功 {batch.successCount}</Tag>
+          <Tag color={batch.failedCount > 0 ? "error" : "default"}>失败 {batch.failedCount}</Tag>
+        </Space>
+      ),
+    },
+    {
+      title: "出发日期范围",
+      dataIndex: "dateRange",
+      width: 210,
+    },
+    {
+      title: "产品/行程数",
+      dataIndex: "itineraryCount",
+      width: 140,
+      render: (value: number, batch) => `${batch.productCount} 个产品 / ${value} 条行程`,
+    },
+    {
+      title: "操作",
+      dataIndex: "batchId",
+      width: 150,
+      render: (batchId: string) => (
+        <Button size="small" icon={<DownloadOutlined />} onClick={() => onExportBatch(batchId)}>
+          导出本次记录
+        </Button>
+      ),
+    },
+  ];
+
+  const detailColumns: ColumnsType<OpeningExecutionRecord> = [
     {
       title: "出发日期",
       dataIndex: "departureDate",
@@ -110,14 +144,9 @@ export function ExecutionResultPage({
             开团执行结果
           </Space>
         }
-        extra={
-          <Button icon={<DownloadOutlined />} onClick={onExport}>
-            导出历史记录
-          </Button>
-        }
       >
         <Space wrap size={16}>
-          <Statistic title="本次执行" value={latestRecords.length} suffix="条" />
+          <Statistic title="本次执行团期" value={latestRecords.length} suffix="个" />
           <Statistic
             title="开团成功"
             value={successCount}
@@ -130,18 +159,31 @@ export function ExecutionResultPage({
             prefix={<CloseCircleOutlined />}
             valueStyle={failedCount > 0 ? { color: "#cf1322" } : undefined}
           />
-          <Statistic title="历史记录" value={records.length} suffix="条" />
+          <Statistic title="历史执行" value={batches.length} suffix="次" />
         </Space>
       </Card>
 
-      <Card title="历史开团记录">
+      <Card title="历史执行记录">
         <Table
-          rowKey="executionId"
+          rowKey="batchId"
           size="middle"
-          dataSource={sortedRecords}
-          columns={columns}
+          dataSource={batches}
+          columns={batchColumns}
           pagination={{ pageSize: 10, showSizeChanger: false }}
-          scroll={{ x: 1660 }}
+          scroll={{ x: 1040 }}
+          expandable={{
+            defaultExpandedRowKeys: latestBatchId ? [latestBatchId] : [],
+            expandedRowRender: (batch) => (
+              <Table
+                rowKey="executionId"
+                size="small"
+                dataSource={batch.records}
+                columns={detailColumns}
+                pagination={false}
+                scroll={{ x: 1360 }}
+              />
+            ),
+          }}
         />
       </Card>
     </Space>
@@ -162,4 +204,54 @@ function ExecutionStatusTag({ status }: { status: OpeningExecutionStatus }) {
 
 function formatDateTime(value: string) {
   return value.replace("T", " ").slice(0, 19);
+}
+
+interface OpeningExecutionBatch {
+  batchId: string;
+  executedAt: string;
+  totalCount: number;
+  successCount: number;
+  failedCount: number;
+  dateRange: string;
+  productCount: number;
+  itineraryCount: number;
+  records: OpeningExecutionRecord[];
+}
+
+function buildExecutionBatches(records: OpeningExecutionRecord[]): OpeningExecutionBatch[] {
+  const recordsByBatch = new Map<string, OpeningExecutionRecord[]>();
+
+  records.forEach((record) => {
+    recordsByBatch.set(record.batchId, [...(recordsByBatch.get(record.batchId) ?? []), record]);
+  });
+
+  return [...recordsByBatch.entries()]
+    .map(([batchId, batchRecords]) => {
+      const sortedRecords = [...batchRecords].sort((a, b) =>
+        a.departureDate.localeCompare(b.departureDate),
+      );
+      const departureDates = sortedRecords.map((record) => record.departureDate);
+      const productCodes = new Set(sortedRecords.map((record) => record.productCode));
+      const itineraryKeys = new Set(
+        sortedRecords.map((record) => `${record.productCode}|${record.itineraryCode}`),
+      );
+      const successCount = sortedRecords.filter((record) => record.status === "开团成功").length;
+      const failedCount = sortedRecords.length - successCount;
+
+      return {
+        batchId,
+        executedAt: sortedRecords[0]?.executedAt ?? "",
+        totalCount: sortedRecords.length,
+        successCount,
+        failedCount,
+        dateRange:
+          departureDates.length > 1
+            ? `${departureDates[0]} 至 ${departureDates[departureDates.length - 1]}`
+            : departureDates[0] ?? "-",
+        productCount: productCodes.size,
+        itineraryCount: itineraryKeys.size,
+        records: sortedRecords,
+      };
+    })
+    .sort((a, b) => b.executedAt.localeCompare(a.executedAt));
 }
