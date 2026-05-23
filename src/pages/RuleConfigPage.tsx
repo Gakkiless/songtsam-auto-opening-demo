@@ -13,6 +13,7 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import type { ReactNode } from "react";
 import { formatWeekdays } from "../engine/openingEngine";
 import type {
   AllowedDepartureRule,
@@ -65,142 +66,6 @@ export function RuleConfigPage({
   onUpdateProductOpeningConfig: (config: ProductOpeningConfig) => void;
   onUpdateStrategyConfig: (patch: Partial<StrategyConfig>) => void;
 }) {
-  const businessColumns: ColumnsType<BusinessFrequencyRule> = [
-    {
-      title: "启用",
-      dataIndex: "enabled",
-      width: 82,
-      fixed: "left",
-      render: (_, rule) => (
-        <Switch
-          checked={rule.enabled}
-          checkedChildren="开"
-          unCheckedChildren="关"
-          onChange={(enabled) => onUpdateBusinessRule({ ...rule, enabled })}
-        />
-      ),
-    },
-    {
-      title: "业务类型",
-      dataIndex: "businessType",
-      width: 120,
-      fixed: "left",
-      render: (businessType: string) => <Tag color="blue">{businessType}</Tag>,
-    },
-    {
-      title: "开团频次",
-      width: 190,
-      render: (_, rule) => (
-        <Space direction="vertical" size={6} className="full-width">
-          <Select
-            value={rule.frequencyType}
-            options={frequencyOptions}
-            onChange={(frequencyType) =>
-              onUpdateBusinessRule(normalizeFrequencyRule({ ...rule, frequencyType }))
-            }
-          />
-          {rule.frequencyType === "intervalDays" ? (
-            <InputNumber
-              min={1}
-              max={30}
-              addonBefore="每"
-              addonAfter="天"
-              value={rule.intervalDays ?? 1}
-              onChange={(intervalDays) =>
-                onUpdateBusinessRule({ ...rule, intervalDays: intervalDays ?? 1 })
-              }
-              className="full-width"
-            />
-          ) : null}
-          {rule.frequencyType === "weekly" ? (
-            <Select
-              mode="multiple"
-              value={rule.weekdays ?? []}
-              options={weekdayOptions}
-              placeholder="选择星期"
-              onChange={(weekdays) => onUpdateBusinessRule({ ...rule, weekdays })}
-            />
-          ) : null}
-        </Space>
-      ),
-    },
-    {
-      title: "出发日限制",
-      width: 240,
-      render: (_, rule) => (
-        <Space direction="vertical" size={6} className="full-width">
-          <Select
-            value={rule.allowedDepartureRule.type}
-            options={departureRuleOptions}
-            onChange={(type) =>
-              onUpdateBusinessRule({
-                ...rule,
-                allowedDepartureRule: buildAllowedDepartureRule(
-                  type,
-                  rule.allowedDepartureRule.weekdays,
-                ),
-              })
-            }
-          />
-          {rule.allowedDepartureRule.type === "weekdays" ? (
-            <Select
-              mode="multiple"
-              value={rule.allowedDepartureRule.weekdays ?? []}
-              options={weekdayOptions}
-              placeholder="选择允许星期"
-              onChange={(weekdays) =>
-                onUpdateBusinessRule({
-                  ...rule,
-                  allowedDepartureRule: buildAllowedDepartureRule("weekdays", weekdays),
-                })
-              }
-            />
-          ) : null}
-        </Space>
-      ),
-    },
-    {
-      title: "首选出发日",
-      width: 180,
-      render: (_, rule) => (
-        <Select
-          mode="multiple"
-          value={rule.preferredWeekdays}
-          options={weekdayOptions}
-          placeholder="可不选"
-          onChange={(preferredWeekdays) => onUpdateBusinessRule({ ...rule, preferredWeekdays })}
-        />
-      ),
-    },
-    {
-      title: "次选出发日",
-      width: 180,
-      render: (_, rule) => (
-        <Select
-          mode="multiple"
-          value={rule.fallbackWeekdays}
-          options={weekdayOptions}
-          placeholder="可不选"
-          onChange={(fallbackWeekdays) => onUpdateBusinessRule({ ...rule, fallbackWeekdays })}
-        />
-      ),
-    },
-    {
-      title: "库存预占",
-      width: 110,
-      render: (_, rule) => (
-        <Switch
-          checked={!rule.skipInventoryLock}
-          checkedChildren="预占"
-          unCheckedChildren="不预占"
-          onChange={(shouldLock) =>
-            onUpdateBusinessRule({ ...rule, skipInventoryLock: !shouldLock })
-          }
-        />
-      ),
-    },
-  ];
-
   const productColumns: ColumnsType<ProductOpeningConfig> = [
     {
       title: "产品",
@@ -301,14 +166,13 @@ export function RuleConfigPage({
       />
 
       <Card title="业务类型开团规则配置">
-        <Table
-          rowKey="businessType"
-          size="middle"
-          pagination={false}
-          dataSource={config.businessTypeOpeningRules}
-          columns={businessColumns}
-          scroll={{ x: 1180 }}
-        />
+        <Row gutter={[16, 16]}>
+          {config.businessTypeOpeningRules.map((rule) => (
+            <Col xs={24} xl={12} key={rule.businessType}>
+              <BusinessRuleCard rule={rule} onUpdateBusinessRule={onUpdateBusinessRule} />
+            </Col>
+          ))}
+        </Row>
       </Card>
 
       <Card title="房型与库存策略配置">
@@ -361,6 +225,180 @@ export function RuleConfigPage({
           scroll={{ x: 1080 }}
         />
       </Card>
+    </Space>
+  );
+}
+
+function BusinessRuleCard({
+  rule,
+  onUpdateBusinessRule,
+}: {
+  rule: BusinessFrequencyRule;
+  onUpdateBusinessRule: (rule: BusinessFrequencyRule) => void;
+}) {
+  return (
+    <Card
+      size="small"
+      className="business-rule-card"
+      title={
+        <Space wrap>
+          <Tag color="blue">{rule.businessType}</Tag>
+          <Text type="secondary">{rule.label}</Text>
+        </Space>
+      }
+      extra={
+        <Switch
+          checked={rule.enabled}
+          checkedChildren="开"
+          unCheckedChildren="关"
+          onChange={(enabled) => onUpdateBusinessRule({ ...rule, enabled })}
+        />
+      }
+    >
+      <Row gutter={[14, 14]}>
+        <Col xs={24} md={12}>
+          <RuleField label="开团频次">
+            <Select
+              value={rule.frequencyType}
+              options={frequencyOptions}
+              className="full-width"
+              onChange={(frequencyType) =>
+                onUpdateBusinessRule(normalizeFrequencyRule({ ...rule, frequencyType }))
+              }
+            />
+          </RuleField>
+        </Col>
+
+        {rule.frequencyType === "intervalDays" ? (
+          <Col xs={24} md={12}>
+            <RuleField label="开团间隔">
+              <InputNumber
+                min={1}
+                max={30}
+                addonBefore="每"
+                addonAfter="天"
+                value={rule.intervalDays ?? 1}
+                onChange={(intervalDays) =>
+                  onUpdateBusinessRule({ ...rule, intervalDays: intervalDays ?? 1 })
+                }
+                className="full-width"
+              />
+            </RuleField>
+          </Col>
+        ) : null}
+
+        {rule.frequencyType === "weekly" ? (
+          <Col xs={24} md={12}>
+            <RuleField label="每周发团日">
+              <Select
+                mode="multiple"
+                value={rule.weekdays ?? []}
+                options={weekdayOptions}
+                placeholder="选择星期"
+                className="full-width"
+                onChange={(weekdays) => onUpdateBusinessRule({ ...rule, weekdays })}
+              />
+            </RuleField>
+          </Col>
+        ) : null}
+
+        <Col xs={24} md={12}>
+          <RuleField label="出发日限制">
+            <Select
+              value={rule.allowedDepartureRule.type}
+              options={departureRuleOptions}
+              className="full-width"
+              onChange={(type) =>
+                onUpdateBusinessRule({
+                  ...rule,
+                  allowedDepartureRule: buildAllowedDepartureRule(
+                    type,
+                    rule.allowedDepartureRule.weekdays,
+                  ),
+                })
+              }
+            />
+          </RuleField>
+        </Col>
+
+        {rule.allowedDepartureRule.type === "weekdays" ? (
+          <Col xs={24} md={12}>
+            <RuleField label="允许星期">
+              <Select
+                mode="multiple"
+                value={rule.allowedDepartureRule.weekdays ?? []}
+                options={weekdayOptions}
+                placeholder="选择允许星期"
+                className="full-width"
+                onChange={(weekdays) =>
+                  onUpdateBusinessRule({
+                    ...rule,
+                    allowedDepartureRule: buildAllowedDepartureRule("weekdays", weekdays),
+                  })
+                }
+              />
+            </RuleField>
+          </Col>
+        ) : null}
+
+        <Col xs={24} md={12}>
+          <RuleField label="首选出发日">
+            <Select
+              mode="multiple"
+              value={rule.preferredWeekdays}
+              options={weekdayOptions}
+              placeholder="可不选"
+              className="full-width"
+              onChange={(preferredWeekdays) =>
+                onUpdateBusinessRule({ ...rule, preferredWeekdays })
+              }
+            />
+          </RuleField>
+        </Col>
+
+        <Col xs={24} md={12}>
+          <RuleField label="次选出发日">
+            <Select
+              mode="multiple"
+              value={rule.fallbackWeekdays}
+              options={weekdayOptions}
+              placeholder="可不选"
+              className="full-width"
+              onChange={(fallbackWeekdays) =>
+                onUpdateBusinessRule({ ...rule, fallbackWeekdays })
+              }
+            />
+          </RuleField>
+        </Col>
+
+        <Col xs={24} md={12}>
+          <RuleField label="库存预占">
+            <Switch
+              checked={!rule.skipInventoryLock}
+              checkedChildren="预占"
+              unCheckedChildren="不预占"
+              onChange={(shouldLock) =>
+                onUpdateBusinessRule({ ...rule, skipInventoryLock: !shouldLock })
+              }
+            />
+          </RuleField>
+        </Col>
+      </Row>
+    </Card>
+  );
+}
+
+function RuleField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <Space direction="vertical" size={6} className="full-width">
+      <Text strong>{label}</Text>
+      {children}
     </Space>
   );
 }
