@@ -42,7 +42,6 @@ export interface OpeningRuleOverride {
   allowedDepartureRule?: AllowedDepartureRule;
   preferredWeekdays?: number[];
   fallbackWeekdays?: number[];
-  skipInventoryLock?: boolean;
 }
 
 export interface ProductOpeningConfig {
@@ -96,7 +95,6 @@ export interface BusinessFrequencyRule {
   allowedDepartureRule: AllowedDepartureRule;
   preferredWeekdays: number[];
   fallbackWeekdays: number[];
-  skipInventoryLock?: boolean;
 }
 
 export interface StrategyConfig {
@@ -117,7 +115,6 @@ export interface ResolvedOpeningConfig {
   allowedDepartureRule: AllowedDepartureRule;
   preferredWeekdays: number[];
   fallbackWeekdays: number[];
-  skipInventoryLock: boolean;
   ruleLabel: string;
   roomTypePreferences: ProductRoomTypePreference[];
 }

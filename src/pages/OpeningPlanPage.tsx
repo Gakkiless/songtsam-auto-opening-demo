@@ -51,7 +51,7 @@ export function OpeningPlanPage({
       dataIndex: "productName",
       width: 260,
       render: (_: string, plan) => (
-        <Space orientation="vertical" size={0}>
+        <Space direction="vertical" size={0}>
           <Text strong>{plan.productName}</Text>
           <Text type="secondary">
             {plan.productCode} / {plan.itineraryName}

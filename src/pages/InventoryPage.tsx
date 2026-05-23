@@ -28,7 +28,7 @@ export function InventoryPage({ rows }: { rows: InventoryViewRow[] }) {
       dataIndex: "hotelName",
       width: 210,
       render: (_: string, row) => (
-        <Space orientation="vertical" size={0}>
+        <Space direction="vertical" size={0}>
           <Text>{row.hotelName}</Text>
           <Text type="secondary">
             {row.hotelCode} / {row.hotelShortName}
@@ -41,7 +41,7 @@ export function InventoryPage({ rows }: { rows: InventoryViewRow[] }) {
       dataIndex: "roomTypeName",
       width: 220,
       render: (_: string, row) => (
-        <Space orientation="vertical" size={0}>
+        <Space direction="vertical" size={0}>
           <Text>{row.roomTypeName}</Text>
           <Space size={4}>
             <Tag>{row.roomClass}</Tag>
@@ -98,7 +98,7 @@ export function InventoryPage({ rows }: { rows: InventoryViewRow[] }) {
       dataIndex: "occupancyRate",
       width: 150,
       render: (value: number) => (
-        <Space orientation="vertical" size={0} className="full-width">
+        <Space direction="vertical" size={0} className="full-width">
           <Progress
             percent={Math.round(value * 100)}
             size="small"

@@ -16,9 +16,11 @@ import {
   Descriptions,
   Empty,
   Input,
+  InputNumber,
   Row,
   Select,
   Space,
+  Switch,
   Statistic,
   Table,
   Tag,
@@ -31,13 +33,38 @@ import {
   resolveOpeningConfig,
 } from "../engine/openingEngine";
 import type {
+  AllowedDepartureRule,
   GenerateOpeningResult,
+  OpeningRuleOverride,
   Product,
   ProductOpeningConfig,
   StrategyConfig,
 } from "../types/domain";
 
 const { Text } = Typography;
+
+const weekdayOptions = [
+  { label: "周日", value: 0 },
+  { label: "周一", value: 1 },
+  { label: "周二", value: 2 },
+  { label: "周三", value: 3 },
+  { label: "周四", value: 4 },
+  { label: "周五", value: 5 },
+  { label: "周六", value: 6 },
+];
+
+const frequencyOptions = [
+  { label: "每日开团", value: "daily" },
+  { label: "每 N 天", value: "intervalDays" },
+  { label: "每周指定星期", value: "weekly" },
+];
+
+const departureRuleOptions = [
+  { label: "不限出发日", value: "none" },
+  { label: "只能单数日", value: "oddDays" },
+  { label: "只能双数日", value: "evenDays" },
+  { label: "指定星期", value: "weekdays" },
+];
 
 interface ProductOption {
   productCode: string;
@@ -64,6 +91,7 @@ export function AutoOpeningPage({
   onAddDraftItinerary,
   onRemoveAddedItinerary,
   onClearAddedItineraries,
+  onUpdateProductOpeningConfig,
   onGenerate,
 }: {
   startDate: string;
@@ -83,6 +111,7 @@ export function AutoOpeningPage({
   onAddDraftItinerary: () => void;
   onRemoveAddedItinerary: (itineraryKey: string) => void;
   onClearAddedItineraries: () => void;
+  onUpdateProductOpeningConfig: (config: ProductOpeningConfig) => void;
   onGenerate: () => void;
 }) {
   const openableCount = result?.openingPlans.filter((plan) => plan.status === "可开团").length ?? 0;
@@ -103,11 +132,11 @@ export function AutoOpeningPage({
   }));
 
   return (
-    <Space orientation="vertical" size={18} className="page-stack">
+    <Space direction="vertical" size={18} className="page-stack">
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={10}>
           <Card title="开团条件" className="control-card">
-            <Space orientation="vertical" size={14} className="full-width">
+            <Space direction="vertical" size={14} className="full-width">
               <div>
                 <Text strong>日期区间</Text>
                 <Row gutter={10} className="control-input">
@@ -274,6 +303,7 @@ export function AutoOpeningPage({
       {selectedProducts.length > 0 ? (
         <Row gutter={[16, 16]}>
           {selectedProducts.map((product) => {
+            const openingConfig = getProductOpeningConfig(productOpeningConfigs, product);
             const resolvedOpeningConfig = resolveOpeningConfig(
               product,
               productOpeningConfigs,
@@ -298,29 +328,20 @@ export function AutoOpeningPage({
                     <Descriptions.Item label="酒店简称">
                       {getItineraryShortCode(product)}
                     </Descriptions.Item>
-                    <Descriptions.Item label="默认规模">
-                      {resolvedOpeningConfig
-                        ? `${resolvedOpeningConfig.defaultGroupSize} 人 / ${resolvedOpeningConfig.defaultRoomCount} 间`
-                        : "未配置"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="开团频次">
-                      {resolvedOpeningConfig ? getFrequencyLabel(resolvedOpeningConfig) : "未配置"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="出发日限制">
-                      {resolvedOpeningConfig?.allowedDepartureRule.description ?? "未配置"}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="首选/次选发团日">
-                      {resolvedOpeningConfig
-                        ? formatPreferredWeekdays(
-                            resolvedOpeningConfig.preferredWeekdays,
-                            resolvedOpeningConfig.fallbackWeekdays,
-                          )
-                        : "不配置"}
-                    </Descriptions.Item>
                     <Descriptions.Item label="参与基本盘">
                       {resolvedOpeningConfig?.enabled ? <Tag color="green">是</Tag> : <Tag>否</Tag>}
                     </Descriptions.Item>
                   </Descriptions>
+
+                  {openingConfig ? (
+                    <InlineItineraryConfig
+                      openingConfig={openingConfig}
+                      resolvedOpeningConfig={resolvedOpeningConfig}
+                      onUpdateProductOpeningConfig={onUpdateProductOpeningConfig}
+                    />
+                  ) : (
+                    <Alert type="error" showIcon title="未找到该产品行程的开团配置。" />
+                  )}
 
                   <Table
                     rowKey={(record) => `${product.itineraryCode}-${record.dayIndex}`}
@@ -338,7 +359,7 @@ export function AutoOpeningPage({
                         title: "酒店",
                         dataIndex: "hotelName",
                         render: (_: string, record) => (
-                          <Space orientation="vertical" size={0}>
+                          <Space direction="vertical" size={0}>
                             <Text>{record.hotelName}</Text>
                             <Text type="secondary">{record.hotelCode}</Text>
                           </Space>
@@ -397,6 +418,293 @@ function MetricCard({
 
 function getProductItineraryKey(product: Product): string {
   return `${product.productCode}|${product.itineraryCode}`;
+}
+
+function getProductOpeningConfig(configs: ProductOpeningConfig[], product: Product) {
+  return (
+    configs.find(
+      (openingConfig) =>
+        openingConfig.productCode === product.productCode &&
+        openingConfig.itineraryCode === product.itineraryCode,
+    ) ?? configs.find((openingConfig) => openingConfig.productCode === product.productCode)
+  );
+}
+
+function InlineItineraryConfig({
+  openingConfig,
+  resolvedOpeningConfig,
+  onUpdateProductOpeningConfig,
+}: {
+  openingConfig: ProductOpeningConfig;
+  resolvedOpeningConfig: ReturnType<typeof resolveOpeningConfig>["openingConfig"];
+  onUpdateProductOpeningConfig: (config: ProductOpeningConfig) => void;
+}) {
+  const openingRule = getOpeningRule(openingConfig);
+
+  const updateConfig = (patch: Partial<ProductOpeningConfig>) => {
+    onUpdateProductOpeningConfig({
+      ...openingConfig,
+      ...patch,
+    });
+  };
+
+  const updateRule = (patch: Partial<OpeningRuleOverride>) => {
+    onUpdateProductOpeningConfig({
+      ...openingConfig,
+      overrideRule: {
+        ...openingRule,
+        ...patch,
+      },
+    });
+  };
+
+  return (
+    <div className="inline-itinerary-config">
+      <Space align="center" className="full-width inline-config-header">
+        <Text strong>本行程开团配置</Text>
+        <Switch
+          checked={openingConfig.enabled ?? true}
+          checkedChildren="参与"
+          unCheckedChildren="不参与"
+          onChange={(enabled) => updateConfig({ enabled })}
+        />
+      </Space>
+
+      <Row gutter={[12, 12]}>
+        <Col xs={24} md={12}>
+          <RuleField label="默认人数">
+            <InputNumber
+              min={1}
+              max={80}
+              value={openingConfig.defaultGroupSize}
+              className="full-width"
+              onChange={(defaultGroupSize) =>
+                updateConfig({
+                  defaultGroupSize: defaultGroupSize ?? openingConfig.defaultGroupSize,
+                })
+              }
+            />
+          </RuleField>
+        </Col>
+
+        <Col xs={24} md={12}>
+          <RuleField label="默认房间数">
+            <InputNumber
+              min={1}
+              max={40}
+              value={openingConfig.defaultRoomCount}
+              className="full-width"
+              onChange={(defaultRoomCount) =>
+                updateConfig({
+                  defaultRoomCount: defaultRoomCount ?? openingConfig.defaultRoomCount,
+                })
+              }
+            />
+          </RuleField>
+        </Col>
+
+        <Col xs={24} md={12}>
+          <RuleField label="开团频次">
+            <Select
+              value={openingRule.frequencyType}
+              options={frequencyOptions}
+              className="full-width"
+              onChange={(frequencyType: NonNullable<OpeningRuleOverride["frequencyType"]>) =>
+                updateRule(normalizeFrequencyRule(openingRule, frequencyType))
+              }
+            />
+          </RuleField>
+        </Col>
+
+        {openingRule.frequencyType === "intervalDays" ? (
+          <Col xs={24} md={12}>
+            <RuleField label="开团间隔">
+              <InputNumber
+                min={1}
+                max={30}
+                addonBefore="每"
+                addonAfter="天"
+                value={openingRule.intervalDays ?? 1}
+                className="full-width"
+                onChange={(intervalDays) => updateRule({ intervalDays: intervalDays ?? 1 })}
+              />
+            </RuleField>
+          </Col>
+        ) : null}
+
+        {openingRule.frequencyType === "weekly" ? (
+          <Col xs={24} md={12}>
+            <RuleField label="每周发团日">
+              <Select
+                mode="multiple"
+                value={openingRule.weekdays ?? []}
+                options={weekdayOptions}
+                placeholder="选择星期"
+                className="full-width"
+                onChange={(weekdays) => updateRule({ weekdays })}
+              />
+            </RuleField>
+          </Col>
+        ) : null}
+
+        <Col xs={24} md={12}>
+          <RuleField label="出发日限制">
+            <Select
+              value={openingRule.allowedDepartureRule?.type ?? "none"}
+              options={departureRuleOptions}
+              className="full-width"
+              onChange={(type) =>
+                updateRule({
+                  allowedDepartureRule: buildAllowedDepartureRule(
+                    type,
+                    openingRule.allowedDepartureRule?.weekdays,
+                  ),
+                })
+              }
+            />
+          </RuleField>
+        </Col>
+
+        {openingRule.allowedDepartureRule?.type === "weekdays" ? (
+          <Col xs={24} md={12}>
+            <RuleField label="允许星期">
+              <Select
+                mode="multiple"
+                value={openingRule.allowedDepartureRule.weekdays ?? []}
+                options={weekdayOptions}
+                placeholder="选择允许星期"
+                className="full-width"
+                onChange={(weekdays) =>
+                  updateRule({
+                    allowedDepartureRule: buildAllowedDepartureRule("weekdays", weekdays),
+                  })
+                }
+              />
+            </RuleField>
+          </Col>
+        ) : null}
+
+        <Col xs={24} md={12}>
+          <RuleField label="首选出发日">
+            <Select
+              mode="multiple"
+              value={openingRule.preferredWeekdays ?? []}
+              options={weekdayOptions}
+              placeholder="可不选"
+              className="full-width"
+              onChange={(preferredWeekdays) => updateRule({ preferredWeekdays })}
+            />
+          </RuleField>
+        </Col>
+
+        <Col xs={24} md={12}>
+          <RuleField label="次选出发日">
+            <Select
+              mode="multiple"
+              value={openingRule.fallbackWeekdays ?? []}
+              options={weekdayOptions}
+              placeholder="可不选"
+              className="full-width"
+              onChange={(fallbackWeekdays) => updateRule({ fallbackWeekdays })}
+            />
+          </RuleField>
+        </Col>
+      </Row>
+
+      <Text type="secondary">
+        当前规则：{resolvedOpeningConfig ? getFrequencyLabel(resolvedOpeningConfig) : "未配置"} /{" "}
+        {resolvedOpeningConfig?.allowedDepartureRule.description ?? "未配置"} /{" "}
+        {resolvedOpeningConfig
+          ? formatPreferredWeekdays(
+              resolvedOpeningConfig.preferredWeekdays,
+              resolvedOpeningConfig.fallbackWeekdays,
+            )
+          : "不配置"}
+      </Text>
+    </div>
+  );
+}
+
+function RuleField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <Space direction="vertical" size={6} className="full-width">
+      <Text strong>{label}</Text>
+      {children}
+    </Space>
+  );
+}
+
+function getOpeningRule(openingConfig: ProductOpeningConfig): OpeningRuleOverride {
+  return {
+    frequencyType: openingConfig.overrideRule?.frequencyType ?? "daily",
+    weekdays: openingConfig.overrideRule?.weekdays,
+    intervalDays: openingConfig.overrideRule?.intervalDays,
+    allowedDepartureRule:
+      openingConfig.overrideRule?.allowedDepartureRule ?? buildAllowedDepartureRule("none"),
+    preferredWeekdays: openingConfig.overrideRule?.preferredWeekdays ?? [],
+    fallbackWeekdays: openingConfig.overrideRule?.fallbackWeekdays ?? [],
+  };
+}
+
+function normalizeFrequencyRule(
+  rule: OpeningRuleOverride,
+  frequencyType: NonNullable<OpeningRuleOverride["frequencyType"]>,
+): OpeningRuleOverride {
+  if (frequencyType === "daily") {
+    return {
+      ...rule,
+      frequencyType,
+      intervalDays: undefined,
+      weekdays: undefined,
+    };
+  }
+
+  if (frequencyType === "intervalDays") {
+    return {
+      ...rule,
+      frequencyType,
+      intervalDays: rule.intervalDays ?? 2,
+      weekdays: undefined,
+    };
+  }
+
+  return {
+    ...rule,
+    frequencyType,
+    weekdays: rule.weekdays && rule.weekdays.length > 0 ? rule.weekdays : [6],
+    intervalDays: undefined,
+  };
+}
+
+function buildAllowedDepartureRule(
+  type: AllowedDepartureRule["type"],
+  weekdays: number[] = [6],
+): AllowedDepartureRule {
+  if (type === "none") {
+    return { type, description: "不限出发日" };
+  }
+
+  if (type === "oddDays") {
+    return { type, description: "只能单数日出发" };
+  }
+
+  if (type === "evenDays") {
+    return { type, description: "只能双数日出发" };
+  }
+
+  const nextWeekdays = weekdays.length > 0 ? weekdays : [6];
+
+  return {
+    type,
+    weekdays: nextWeekdays,
+    description: `只能${formatWeekdays(nextWeekdays)}出发`,
+  };
 }
 
 function getFrequencyLabel(config: {

@@ -31,7 +31,7 @@ export function PayloadPage({
       }
       extra={<Text type="secondary">生成计划后先预览，产品运营确认后再模拟执行开团接口</Text>}
     >
-      <Space orientation="vertical" size={16} className="full-width">
+      <Space direction="vertical" size={16} className="full-width">
         {executionMessage ? <Alert type="success" showIcon title={executionMessage} /> : null}
         {executedPayloads.length > 0 ? (
           <Alert

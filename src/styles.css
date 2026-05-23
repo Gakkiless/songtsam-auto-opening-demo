@@ -96,21 +96,21 @@ select {
   margin-top: 16px;
 }
 
-.rule-config-card {
-  margin-top: 16px;
-}
-
-.business-rule-card {
-  height: 100%;
-  border-color: #dbeafe;
-}
-
-.business-rule-card .ant-card-head-title {
-  min-width: 0;
-}
-
 .section-gap {
   margin-bottom: 16px;
+}
+
+.inline-itinerary-config {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.inline-config-header {
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
 
 .payload-pre {

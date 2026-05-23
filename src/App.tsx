@@ -5,7 +5,6 @@ import {
   DashboardOutlined,
   FileDoneOutlined,
   FileTextOutlined,
-  SettingOutlined,
   TableOutlined,
 } from "@ant-design/icons";
 import { ConfigProvider, Layout, Segmented, Space, Tag, Typography, theme } from "antd";
@@ -21,16 +20,14 @@ import { AutoOpeningPage } from "./pages/AutoOpeningPage";
 import { InventoryPage } from "./pages/InventoryPage";
 import { OpeningPlanPage } from "./pages/OpeningPlanPage";
 import { PayloadPage } from "./pages/PayloadPage";
-import { RuleConfigPage } from "./pages/RuleConfigPage";
 import type {
   GenerateOpeningResult,
   OpeningPayload,
   Product,
   ProductOpeningConfig,
-  StrategyConfig,
 } from "./types/domain";
 
-type TabKey = "home" | "config" | "plans" | "inventory" | "payload";
+type TabKey = "home" | "plans" | "inventory" | "payload";
 
 export interface ProductOption {
   productCode: string;
@@ -44,7 +41,6 @@ const { Text, Title } = Typography;
 
 const tabs = [
   { value: "home" as const, label: "自动开团", icon: <DashboardOutlined /> },
-  { value: "config" as const, label: "规则配置", icon: <SettingOutlined /> },
   { value: "plans" as const, label: "待确认计划", icon: <FileDoneOutlined /> },
   { value: "inventory" as const, label: "酒店资源占用表", icon: <TableOutlined /> },
   { value: "payload" as const, label: "Payload 预览", icon: <FileTextOutlined /> },
@@ -62,9 +58,6 @@ function App() {
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
   const [executedPayloads, setExecutedPayloads] = useState<OpeningPayload[]>([]);
   const [executionMessage, setExecutionMessage] = useState("");
-  const [openingStrategyConfig, setOpeningStrategyConfig] = useState<StrategyConfig>(() =>
-    cloneValue(initialStrategyConfig),
-  );
   const [openingConfigs, setOpeningConfigs] = useState<ProductOpeningConfig[]>(() =>
     cloneValue(initialProductOpeningConfigs),
   );
@@ -161,7 +154,7 @@ function App() {
       productOpeningConfigs: openingConfigs,
       hotels,
       inventory,
-      config: openingStrategyConfig,
+      config: initialStrategyConfig,
       startDate,
       endDate,
     });
@@ -201,14 +194,6 @@ function App() {
       `已模拟执行 ${payloadsToExecute.length} 条开团接口；真实系统会在这里重新校验库存并提交开团。`,
     );
     setActiveTab("payload");
-  };
-
-  const handleUpdateStrategyConfig = (patch: Partial<StrategyConfig>) => {
-    setOpeningStrategyConfig((currentConfig) => ({
-      ...currentConfig,
-      ...patch,
-    }));
-    resetGeneratedState();
   };
 
   const handleUpdateProductOpeningConfig = (nextConfig: ProductOpeningConfig) => {
@@ -292,7 +277,7 @@ function App() {
               draftItineraryOptions={draftItineraryOptions}
               selectedProducts={selectedProducts}
               productOpeningConfigs={openingConfigs}
-              config={openingStrategyConfig}
+              config={initialStrategyConfig}
               result={result}
               selectionError={selectionError}
               onDateRangeChange={handleDateRangeChange}
@@ -301,17 +286,8 @@ function App() {
               onAddDraftItinerary={handleAddDraftItinerary}
               onRemoveAddedItinerary={handleRemoveAddedItinerary}
               onClearAddedItineraries={handleClearAddedItineraries}
-              onGenerate={handleGenerate}
-            />
-          ) : null}
-
-          {activeTab === "config" ? (
-            <RuleConfigPage
-              config={openingStrategyConfig}
-              productOpeningConfigs={openingConfigs}
-              products={products}
               onUpdateProductOpeningConfig={handleUpdateProductOpeningConfig}
-              onUpdateStrategyConfig={handleUpdateStrategyConfig}
+              onGenerate={handleGenerate}
             />
           ) : null}
 

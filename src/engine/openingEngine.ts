@@ -374,21 +374,6 @@ export function generateOpeningPlans(params: {
         return;
       }
 
-      if (openingConfig.skipInventoryLock) {
-        openingPlans.push(
-          createOpeningPlan({
-            product,
-            openingConfig,
-            departureDate,
-            planSequence: planSequence++,
-            status: "可开团",
-            reason: "该产品行程配置为不计算酒店资源占用",
-            resourceUsage: [],
-          }),
-        );
-        return;
-      }
-
       const requirement = calculateItineraryResourceUsage(product, departureDate, openingConfig);
       const resolvedResource = resolveResourceUsage(requirement, hotels, inventory, config);
 
@@ -517,8 +502,6 @@ export function resolveOpeningConfig(
         overrideRule.allowedDepartureRule ?? businessRule.allowedDepartureRule,
       preferredWeekdays: overrideRule.preferredWeekdays ?? businessRule.preferredWeekdays,
       fallbackWeekdays: overrideRule.fallbackWeekdays ?? businessRule.fallbackWeekdays,
-      skipInventoryLock:
-        overrideRule.skipInventoryLock ?? businessRule.skipInventoryLock ?? false,
       ruleLabel: productConfig.overrideRule
         ? `${businessRule.label} / 产品行程覆盖`
         : businessRule.label,
