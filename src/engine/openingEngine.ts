@@ -294,7 +294,6 @@ export function generateOpeningPayload(openingPlan: OpeningPlan): OpeningPayload
     businessType: openingPlan.businessType,
     departureDate: openingPlan.departureDate,
     groupSize: openingPlan.groupSize,
-    groupNo: openingPlan.groupNo,
     resourceList: [...resources.values()].map((usage) => ({
       hotelCode: usage.hotelCode,
       roomTypeCode: usage.roomTypeCode,
@@ -641,7 +640,6 @@ function createOpeningPlan(params: {
     itineraryName: product.itineraryName,
     businessType: product.businessType,
     departureDate,
-    groupNo: generateGroupNo(product.productCode, departureDate, planSequence),
     groupSize: openingConfig?.defaultGroupSize ?? 0,
     roomCount: openingConfig?.defaultRoomCount ?? 0,
     status,
@@ -733,8 +731,4 @@ export function formatPercent(value: number): string {
 
 function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
-}
-
-function generateGroupNo(productCode: string, departureDate: string, sequence: number): string {
-  return `KT-${departureDate.replace(/-/g, "")}-${productCode}-${String(sequence).padStart(3, "0")}`;
 }

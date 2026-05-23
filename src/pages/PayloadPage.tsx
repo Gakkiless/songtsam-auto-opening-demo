@@ -48,13 +48,18 @@ export function PayloadPage({
 
         <Row gutter={[16, 16]}>
           {payloads.map((payload) => (
-            <Col xs={24} xl={12} key={`${payload.productCode}-${payload.departureDate}-${payload.groupNo}`}>
+            <Col
+              xs={24}
+              xl={12}
+              key={`${payload.productCode}-${payload.itineraryCode}-${payload.departureDate}`}
+            >
               <Card
                 size="small"
                 title={
                   <Space wrap>
                     <Tag color="blue">{payload.businessType}</Tag>
-                    <Text code>{payload.groupNo}</Text>
+                    <Text code>{payload.productCode}</Text>
+                    <Text type="secondary">{payload.departureDate}</Text>
                   </Space>
                 }
                 extra={<ApiOutlined />}

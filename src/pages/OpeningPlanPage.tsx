@@ -1,7 +1,7 @@
 import { CheckCircleOutlined, SendOutlined } from "@ant-design/icons";
 import { Button, Card, Empty, Space, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import type { OpeningPlan, OpeningPlanStatus } from "../types/domain";
+import type { OpeningPlan, OpeningPlanStatus, ResolvedResourceUsage } from "../types/domain";
 
 const { Text } = Typography;
 
@@ -60,22 +60,16 @@ export function OpeningPlanPage({
       ),
     },
     {
-      title: "团号",
-      dataIndex: "groupNo",
-      width: 210,
-      render: (value: string) => <Text code>{value}</Text>,
-    },
-    {
-      title: "出行人数",
+      title: "最大人数库存",
       dataIndex: "groupSize",
-      width: 100,
+      width: 120,
       align: "right",
     },
     {
       title: "占用房间数",
-      dataIndex: "roomCount",
-      width: 110,
-      align: "right",
+      dataIndex: "resourceUsage",
+      width: 260,
+      render: (_: ResolvedResourceUsage[], plan) => <RoomTypeSummary plan={plan} />,
     },
     {
       title: "状态",
@@ -116,7 +110,7 @@ export function OpeningPlanPage({
         dataSource={sortedPlans}
         columns={columns}
         pagination={{ pageSize: 10, showSizeChanger: false }}
-        scroll={{ x: 1400 }}
+        scroll={{ x: 1380 }}
         rowSelection={{
           selectedRowKeys: selectedPlanIds,
           getCheckboxProps: (record) => ({ disabled: record.status !== "可开团" }),
@@ -131,6 +125,57 @@ export function OpeningPlanPage({
         }}
       />
     </Card>
+  );
+}
+
+function RoomTypeSummary({ plan }: { plan: OpeningPlan }) {
+  const summaries = summarizeRoomTypes(plan.resourceUsage);
+
+  if (summaries.length === 0) {
+    return plan.roomCount > 0 ? (
+      <Text type="secondary">{plan.roomCount} 间</Text>
+    ) : (
+      <Text type="secondary">-</Text>
+    );
+  }
+
+  return (
+    <Space wrap size={[4, 4]} className="room-summary-list">
+      {summaries.map((summary) => (
+        <Tag
+          key={summary.roomTypeCode}
+          color={summary.roomLevel === "高级" ? "gold" : "blue"}
+        >
+          {summary.roomTypeName} {summary.quantity} 间
+        </Tag>
+      ))}
+    </Space>
+  );
+}
+
+function summarizeRoomTypes(resourceUsage: ResolvedResourceUsage[]) {
+  const summaryByRoomType = new Map<
+    string,
+    {
+      roomTypeCode: string;
+      roomTypeName: string;
+      roomLevel: ResolvedResourceUsage["roomLevel"];
+      quantity: number;
+    }
+  >();
+
+  resourceUsage.forEach((usage) => {
+    const existing = summaryByRoomType.get(usage.roomTypeCode);
+    summaryByRoomType.set(usage.roomTypeCode, {
+      roomTypeCode: usage.roomTypeCode,
+      roomTypeName: usage.roomTypeName,
+      roomLevel: usage.roomLevel,
+      quantity: Math.max(existing?.quantity ?? 0, usage.quantity),
+    });
+  });
+
+  return [...summaryByRoomType.values()].sort((a, b) =>
+    a.roomTypeName.localeCompare(b.roomTypeName, "zh-CN"),
   );
 }
 

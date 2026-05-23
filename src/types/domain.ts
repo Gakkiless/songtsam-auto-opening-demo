@@ -183,7 +183,6 @@ export interface OpeningPlan {
   itineraryName: string;
   businessType: BusinessType;
   departureDate: string;
-  groupNo: string;
   groupSize: number;
   roomCount: number;
   status: OpeningPlanStatus;
@@ -204,7 +203,6 @@ export interface OpeningPayload {
   businessType: BusinessType;
   departureDate: string;
   groupSize: number;
-  groupNo: string;
   resourceList: OpeningPayloadResource[];
 }
 
