@@ -100,8 +100,17 @@ select {
   margin-bottom: 16px;
 }
 
+.itinerary-card-title {
+  min-width: 0;
+}
+
+.config-icon-button {
+  color: #1677ff;
+}
+
 .inline-itinerary-config {
-  margin-bottom: 16px;
+  margin-top: 4px;
+  margin-bottom: 0;
   padding: 14px;
   border: 1px solid #dbeafe;
   border-radius: 10px;

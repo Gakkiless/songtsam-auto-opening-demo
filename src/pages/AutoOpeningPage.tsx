@@ -17,15 +17,17 @@ import {
   Empty,
   Input,
   InputNumber,
+  Modal,
   Row,
   Select,
   Space,
   Statistic,
   Table,
   Tag,
+  Tooltip,
   Typography,
 } from "antd";
-import type { CSSProperties, ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import {
   formatWeekdays,
   getItineraryShortCode,
@@ -113,6 +115,7 @@ export function AutoOpeningPage({
   onUpdateProductOpeningConfig: (config: ProductOpeningConfig) => void;
   onGenerate: () => void;
 }) {
+  const [configModalKey, setConfigModalKey] = useState<string | null>(null);
   const openableCount = result?.openingPlans.filter((plan) => plan.status === "可开团").length ?? 0;
   const insufficientCount =
     result?.openingPlans.filter((plan) => plan.status === "资源不足").length ?? 0;
@@ -129,6 +132,19 @@ export function AutoOpeningPage({
     searchText:
       `${itinerary.productCode} ${itinerary.productName} ${itinerary.itineraryCode} ${itinerary.itineraryName} ${itinerary.businessType} ${getItineraryShortCode(itinerary)}`.toLowerCase(),
   }));
+  const configModalProduct = selectedProducts.find(
+    (product) => getProductItineraryKey(product) === configModalKey,
+  );
+  const configModalOpeningConfig = configModalProduct
+    ? getProductOpeningConfig(productOpeningConfigs, configModalProduct)
+    : undefined;
+  const configModalResolvedOpeningConfig = configModalProduct
+    ? resolveOpeningConfig(
+        configModalProduct,
+        productOpeningConfigs,
+        config.businessTypeOpeningRules,
+      ).openingConfig
+    : null;
 
   return (
     <Space direction="vertical" size={18} className="page-stack">
@@ -303,19 +319,25 @@ export function AutoOpeningPage({
         <Row gutter={[16, 16]}>
           {selectedProducts.map((product) => {
             const openingConfig = getProductOpeningConfig(productOpeningConfigs, product);
-            const resolvedOpeningConfig = resolveOpeningConfig(
-              product,
-              productOpeningConfigs,
-              config.businessTypeOpeningRules,
-            ).openingConfig;
 
             return (
               <Col xs={24} xl={12} key={getProductItineraryKey(product)}>
                 <Card
                   title={
-                    <Space wrap>
+                    <Space wrap className="itinerary-card-title">
                       <span>{product.productName}</span>
                       <Tag color="blue">{product.businessType}</Tag>
+                      <Tooltip title="配置开团规则">
+                        <Button
+                          aria-label={`配置${product.itineraryName}开团规则`}
+                          type="text"
+                          size="small"
+                          icon={<SettingOutlined />}
+                          className="config-icon-button"
+                          disabled={!openingConfig}
+                          onClick={() => setConfigModalKey(getProductItineraryKey(product))}
+                        />
+                      </Tooltip>
                     </Space>
                   }
                 >
@@ -329,15 +351,9 @@ export function AutoOpeningPage({
                     </Descriptions.Item>
                   </Descriptions>
 
-                  {openingConfig ? (
-                    <InlineItineraryConfig
-                      openingConfig={openingConfig}
-                      resolvedOpeningConfig={resolvedOpeningConfig}
-                      onUpdateProductOpeningConfig={onUpdateProductOpeningConfig}
-                    />
-                  ) : (
+                  {!openingConfig ? (
                     <Alert type="error" showIcon title="未找到该产品行程的开团配置。" />
-                  )}
+                  ) : null}
 
                   <Table
                     rowKey={(record) => `${product.itineraryCode}-${record.dayIndex}`}
@@ -382,6 +398,26 @@ export function AutoOpeningPage({
           <Empty description="请先把一个或多个行程添加到待开团清单" />
         </Card>
       )}
+
+      <Modal
+        title={
+          configModalProduct
+            ? `${configModalProduct.productName} / ${configModalProduct.itineraryName}`
+            : "本行程开团配置"
+        }
+        open={Boolean(configModalProduct && configModalOpeningConfig)}
+        footer={null}
+        width={760}
+        onCancel={() => setConfigModalKey(null)}
+      >
+        {configModalOpeningConfig ? (
+          <InlineItineraryConfig
+            openingConfig={configModalOpeningConfig}
+            resolvedOpeningConfig={configModalResolvedOpeningConfig}
+            onUpdateProductOpeningConfig={onUpdateProductOpeningConfig}
+          />
+        ) : null}
+      </Modal>
     </Space>
   );
 }
