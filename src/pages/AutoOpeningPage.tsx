@@ -268,42 +268,6 @@ export function AutoOpeningPage({
             showIcon
             title="库存校验按公共池全量判断；高级房型会触发涨价，基本盘第一版只使用基础房型。"
           />
-
-          <Card title="业务类型默认规则" className="rule-config-card" size="small">
-            <Table
-              rowKey="businessType"
-              size="small"
-              pagination={false}
-              dataSource={config.businessTypeOpeningRules}
-              columns={[
-                {
-                  title: "业务类型",
-                  dataIndex: "businessType",
-                  width: 100,
-                  render: (businessType: string) => <Tag color="blue">{businessType}</Tag>,
-                },
-                {
-                  title: "频次",
-                  render: (_, rule) => formatFrequencyRule(rule),
-                },
-                {
-                  title: "出发日限制",
-                  render: (_, rule) => rule.allowedDepartureRule.description,
-                },
-                {
-                  title: "首选 / 次选",
-                  render: (_, rule) =>
-                    formatPreferredWeekdays(rule.preferredWeekdays, rule.fallbackWeekdays),
-                },
-                {
-                  title: "库存",
-                  width: 100,
-                  render: (_, rule) =>
-                    rule.skipInventoryLock ? <Tag>不预占</Tag> : <Tag color="green">预占</Tag>,
-                },
-              ]}
-            />
-          </Card>
         </Col>
       </Row>
 
@@ -445,20 +409,6 @@ function getFrequencyLabel(config: {
   }
 
   return config.ruleLabel;
-}
-
-function formatFrequencyRule(rule: {
-  frequencyType: string;
-  intervalDays?: number;
-  weekdays?: number[];
-}) {
-  if (rule.frequencyType === "daily") return "每日";
-  if (rule.frequencyType === "intervalDays") return `每 ${rule.intervalDays ?? 1} 天`;
-  if (rule.frequencyType === "weekly") {
-    return `每周 ${rule.weekdays && rule.weekdays.length > 0 ? formatWeekdays(rule.weekdays) : "配置日"}`;
-  }
-
-  return "未配置";
 }
 
 function formatPreferredWeekdays(preferredWeekdays: number[], fallbackWeekdays: number[]) {

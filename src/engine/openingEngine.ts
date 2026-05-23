@@ -382,7 +382,7 @@ export function generateOpeningPlans(params: {
             departureDate,
             planSequence: planSequence++,
             status: "可开团",
-            reason: "目的地套餐每日开团，当前基本盘策略不预占酒店资源",
+            reason: "该产品行程配置为不计算酒店资源占用",
             resourceUsage: [],
           }),
         );

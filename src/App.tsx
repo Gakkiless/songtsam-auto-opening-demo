@@ -23,7 +23,6 @@ import { OpeningPlanPage } from "./pages/OpeningPlanPage";
 import { PayloadPage } from "./pages/PayloadPage";
 import { RuleConfigPage } from "./pages/RuleConfigPage";
 import type {
-  BusinessFrequencyRule,
   GenerateOpeningResult,
   OpeningPayload,
   Product,
@@ -204,16 +203,6 @@ function App() {
     setActiveTab("payload");
   };
 
-  const handleUpdateBusinessRule = (nextRule: BusinessFrequencyRule) => {
-    setOpeningStrategyConfig((currentConfig) => ({
-      ...currentConfig,
-      businessTypeOpeningRules: currentConfig.businessTypeOpeningRules.map((rule) =>
-        rule.businessType === nextRule.businessType ? nextRule : rule,
-      ),
-    }));
-    resetGeneratedState();
-  };
-
   const handleUpdateStrategyConfig = (patch: Partial<StrategyConfig>) => {
     setOpeningStrategyConfig((currentConfig) => ({
       ...currentConfig,
@@ -320,7 +309,7 @@ function App() {
             <RuleConfigPage
               config={openingStrategyConfig}
               productOpeningConfigs={openingConfigs}
-              onUpdateBusinessRule={handleUpdateBusinessRule}
+              products={products}
               onUpdateProductOpeningConfig={handleUpdateProductOpeningConfig}
               onUpdateStrategyConfig={handleUpdateStrategyConfig}
             />

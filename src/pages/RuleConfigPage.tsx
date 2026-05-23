@@ -2,22 +2,21 @@ import {
   Alert,
   Card,
   Col,
-  Divider,
   InputNumber,
   Row,
   Select,
   Space,
   Switch,
-  Table,
   Tag,
   Typography,
 } from "antd";
-import type { ColumnsType } from "antd/es/table";
 import type { ReactNode } from "react";
-import { formatWeekdays } from "../engine/openingEngine";
+import { formatWeekdays, getItineraryShortCode } from "../engine/openingEngine";
 import type {
   AllowedDepartureRule,
   BusinessFrequencyRule,
+  OpeningRuleOverride,
+  Product,
   ProductOpeningConfig,
   RoomLevel,
   StrategyConfig,
@@ -56,126 +55,54 @@ const roomLevelOptions = [
 export function RuleConfigPage({
   config,
   productOpeningConfigs,
-  onUpdateBusinessRule,
+  products,
   onUpdateProductOpeningConfig,
   onUpdateStrategyConfig,
 }: {
   config: StrategyConfig;
   productOpeningConfigs: ProductOpeningConfig[];
-  onUpdateBusinessRule: (rule: BusinessFrequencyRule) => void;
+  products: Product[];
   onUpdateProductOpeningConfig: (config: ProductOpeningConfig) => void;
   onUpdateStrategyConfig: (patch: Partial<StrategyConfig>) => void;
 }) {
-  const productColumns: ColumnsType<ProductOpeningConfig> = [
-    {
-      title: "产品",
-      dataIndex: "productCode",
-      width: 110,
-      fixed: "left",
-      render: (productCode: string) => <Tag>{productCode}</Tag>,
-    },
-    {
-      title: "参与基本盘",
-      width: 120,
-      render: (_, openingConfig) => (
-        <Switch
-          checked={openingConfig.enabled ?? true}
-          checkedChildren="参与"
-          unCheckedChildren="不参与"
-          onChange={(enabled) =>
-            onUpdateProductOpeningConfig({ ...openingConfig, enabled })
-          }
-        />
-      ),
-    },
-    {
-      title: "默认人数",
-      width: 130,
-      render: (_, openingConfig) => (
-        <InputNumber
-          min={1}
-          max={80}
-          value={openingConfig.defaultGroupSize}
-          onChange={(defaultGroupSize) =>
-            onUpdateProductOpeningConfig({
-              ...openingConfig,
-              defaultGroupSize: defaultGroupSize ?? openingConfig.defaultGroupSize,
-            })
-          }
-        />
-      ),
-    },
-    {
-      title: "默认房间数",
-      width: 130,
-      render: (_, openingConfig) => (
-        <InputNumber
-          min={1}
-          max={40}
-          value={openingConfig.defaultRoomCount}
-          onChange={(defaultRoomCount) =>
-            onUpdateProductOpeningConfig({
-              ...openingConfig,
-              defaultRoomCount: defaultRoomCount ?? openingConfig.defaultRoomCount,
-            })
-          }
-        />
-      ),
-    },
-    {
-      title: "特殊覆盖",
-      width: 260,
-      render: (_, openingConfig) =>
-        openingConfig.overrideRule ? (
-          <Space wrap size={[4, 4]}>
-            {openingConfig.overrideRule.allowedDepartureRule ? (
-              <Tag color="orange">{openingConfig.overrideRule.allowedDepartureRule.description}</Tag>
-            ) : null}
-            {openingConfig.overrideRule.preferredWeekdays ? (
-              <Tag>首选 {formatWeekdays(openingConfig.overrideRule.preferredWeekdays)}</Tag>
-            ) : null}
-            {openingConfig.overrideRule.fallbackWeekdays ? (
-              <Tag>次选 {formatWeekdays(openingConfig.overrideRule.fallbackWeekdays)}</Tag>
-            ) : null}
-          </Space>
-        ) : (
-          <Text type="secondary">使用业务类型默认规则</Text>
-        ),
-    },
-    {
-      title: "房型偏好",
-      render: (_, openingConfig) => (
-        <Space wrap size={[4, 4]}>
-          {openingConfig.roomTypePreferences.map((preference) => (
-            <Tag key={`${openingConfig.productCode}-${preference.hotelCode}-${preference.description}`}>
-              {preference.hotelCode} / {preference.roomTypeCode ?? preference.roomClass}
-            </Tag>
-          ))}
-        </Space>
-      ),
-    },
-  ];
-
   return (
     <Space orientation="vertical" size={18} className="page-stack">
       <Alert
         type="info"
         showIcon
         title="这里就是 Demo 的配置入口"
-        description="这些配置当前保存在前端本地状态里，点击生成开团计划时会立即按这里的配置计算；刷新页面会恢复 mock 默认值。真实系统落地时，这里应改为读取和保存策略配置接口。"
+        description="当前按产品行程配置基本盘规则。开团接口执行后，酒店资源状态由后端写入“预分配”；预占是客人下单支付后的状态，不在这里配置。"
       />
 
-      <Card title="业务类型开团规则配置">
+      <Card title="产品行程开团规则配置">
         <Row gutter={[16, 16]}>
-          {config.businessTypeOpeningRules.map((rule) => (
-            <Col xs={24} xl={12} key={rule.businessType}>
-              <BusinessRuleCard rule={rule} onUpdateBusinessRule={onUpdateBusinessRule} />
-            </Col>
-          ))}
+          {productOpeningConfigs.map((openingConfig) => {
+            const product = findProduct(products, openingConfig);
+            const businessRule = product
+              ? config.businessTypeOpeningRules.find(
+                  (rule) => rule.businessType === product.businessType,
+                )
+              : undefined;
+
+            return (
+              <Col
+                xs={24}
+                xl={12}
+                key={`${openingConfig.productCode}-${openingConfig.itineraryCode ?? "product"}`}
+              >
+                <ProductItineraryRuleCard
+                  openingConfig={openingConfig}
+                  product={product}
+                  businessRule={businessRule}
+                  onUpdateProductOpeningConfig={onUpdateProductOpeningConfig}
+                />
+              </Col>
+            );
+          })}
         </Row>
       </Card>
 
-      <Card title="房型与库存策略配置">
+      <Card title="房型策略配置">
         <Row gutter={[16, 16]}>
           <Col xs={24} md={12}>
             <Space direction="vertical" size={8} className="full-width">
@@ -208,182 +135,219 @@ export function RuleConfigPage({
           </Col>
         </Row>
       </Card>
-
-      <Card title="产品默认配置与特殊覆盖">
-        <Text type="secondary">
-          这里配置产品是否参与、默认人数/房数、房型偏好；特殊覆盖用于覆盖业务类型默认规则。
-        </Text>
-        <Divider />
-        <Table
-          rowKey={(openingConfig) =>
-            `${openingConfig.productCode}-${openingConfig.itineraryCode ?? "product"}`
-          }
-          size="middle"
-          pagination={false}
-          dataSource={productOpeningConfigs}
-          columns={productColumns}
-          scroll={{ x: 1080 }}
-        />
-      </Card>
     </Space>
   );
 }
 
-function BusinessRuleCard({
-  rule,
-  onUpdateBusinessRule,
+function ProductItineraryRuleCard({
+  openingConfig,
+  product,
+  businessRule,
+  onUpdateProductOpeningConfig,
 }: {
-  rule: BusinessFrequencyRule;
-  onUpdateBusinessRule: (rule: BusinessFrequencyRule) => void;
+  openingConfig: ProductOpeningConfig;
+  product?: Product;
+  businessRule?: BusinessFrequencyRule;
+  onUpdateProductOpeningConfig: (config: ProductOpeningConfig) => void;
 }) {
+  const openingRule = getOpeningRule(openingConfig, businessRule);
+
+  const updateConfig = (patch: Partial<ProductOpeningConfig>) => {
+    onUpdateProductOpeningConfig({
+      ...openingConfig,
+      ...patch,
+    });
+  };
+
+  const updateRule = (patch: Partial<OpeningRuleOverride>) => {
+    onUpdateProductOpeningConfig({
+      ...openingConfig,
+      overrideRule: {
+        ...openingRule,
+        ...patch,
+      },
+    });
+  };
+
   return (
     <Card
       size="small"
       className="business-rule-card"
       title={
         <Space wrap>
-          <Tag color="blue">{rule.businessType}</Tag>
-          <Text type="secondary">{rule.label}</Text>
+          <Tag color="blue">{openingConfig.productCode}</Tag>
+          {product ? <Text strong>{product.itineraryName}</Text> : <Text strong>未匹配行程</Text>}
         </Space>
       }
       extra={
         <Switch
-          checked={rule.enabled}
-          checkedChildren="开"
-          unCheckedChildren="关"
-          onChange={(enabled) => onUpdateBusinessRule({ ...rule, enabled })}
+          checked={openingConfig.enabled ?? true}
+          checkedChildren="参与"
+          unCheckedChildren="不参与"
+          onChange={(enabled) => updateConfig({ enabled })}
         />
       }
     >
-      <Row gutter={[14, 14]}>
-        <Col xs={24} md={12}>
-          <RuleField label="开团频次">
-            <Select
-              value={rule.frequencyType}
-              options={frequencyOptions}
-              className="full-width"
-              onChange={(frequencyType) =>
-                onUpdateBusinessRule(normalizeFrequencyRule({ ...rule, frequencyType }))
-              }
-            />
-          </RuleField>
-        </Col>
+      <Space direction="vertical" size={14} className="full-width">
+        <Space wrap size={[6, 6]}>
+          {product ? <Tag>{product.productName}</Tag> : null}
+          {product ? <Tag>{product.itineraryCode}</Tag> : null}
+          {product ? <Tag color="geekblue">{product.businessType}</Tag> : null}
+          {product ? <Tag>{getItineraryShortCode(product)}</Tag> : null}
+        </Space>
 
-        {rule.frequencyType === "intervalDays" ? (
+        <Row gutter={[14, 14]}>
           <Col xs={24} md={12}>
-            <RuleField label="开团间隔">
+            <RuleField label="默认人数">
               <InputNumber
                 min={1}
-                max={30}
-                addonBefore="每"
-                addonAfter="天"
-                value={rule.intervalDays ?? 1}
-                onChange={(intervalDays) =>
-                  onUpdateBusinessRule({ ...rule, intervalDays: intervalDays ?? 1 })
+                max={80}
+                value={openingConfig.defaultGroupSize}
+                onChange={(defaultGroupSize) =>
+                  updateConfig({
+                    defaultGroupSize: defaultGroupSize ?? openingConfig.defaultGroupSize,
+                  })
                 }
                 className="full-width"
               />
             </RuleField>
           </Col>
-        ) : null}
 
-        {rule.frequencyType === "weekly" ? (
           <Col xs={24} md={12}>
-            <RuleField label="每周发团日">
-              <Select
-                mode="multiple"
-                value={rule.weekdays ?? []}
-                options={weekdayOptions}
-                placeholder="选择星期"
+            <RuleField label="默认房间数">
+              <InputNumber
+                min={1}
+                max={40}
+                value={openingConfig.defaultRoomCount}
+                onChange={(defaultRoomCount) =>
+                  updateConfig({
+                    defaultRoomCount: defaultRoomCount ?? openingConfig.defaultRoomCount,
+                  })
+                }
                 className="full-width"
-                onChange={(weekdays) => onUpdateBusinessRule({ ...rule, weekdays })}
               />
             </RuleField>
           </Col>
-        ) : null}
 
-        <Col xs={24} md={12}>
-          <RuleField label="出发日限制">
-            <Select
-              value={rule.allowedDepartureRule.type}
-              options={departureRuleOptions}
-              className="full-width"
-              onChange={(type) =>
-                onUpdateBusinessRule({
-                  ...rule,
-                  allowedDepartureRule: buildAllowedDepartureRule(
-                    type,
-                    rule.allowedDepartureRule.weekdays,
-                  ),
-                })
-              }
-            />
-          </RuleField>
-        </Col>
-
-        {rule.allowedDepartureRule.type === "weekdays" ? (
           <Col xs={24} md={12}>
-            <RuleField label="允许星期">
+            <RuleField label="开团频次">
               <Select
-                mode="multiple"
-                value={rule.allowedDepartureRule.weekdays ?? []}
-                options={weekdayOptions}
-                placeholder="选择允许星期"
+                value={openingRule.frequencyType}
+                options={frequencyOptions}
                 className="full-width"
-                onChange={(weekdays) =>
-                  onUpdateBusinessRule({
-                    ...rule,
-                    allowedDepartureRule: buildAllowedDepartureRule("weekdays", weekdays),
+                onChange={(frequencyType) => updateRule(normalizeFrequencyRule(openingRule, frequencyType))}
+              />
+            </RuleField>
+          </Col>
+
+          {openingRule.frequencyType === "intervalDays" ? (
+            <Col xs={24} md={12}>
+              <RuleField label="开团间隔">
+                <InputNumber
+                  min={1}
+                  max={30}
+                  addonBefore="每"
+                  addonAfter="天"
+                  value={openingRule.intervalDays ?? 1}
+                  onChange={(intervalDays) => updateRule({ intervalDays: intervalDays ?? 1 })}
+                  className="full-width"
+                />
+              </RuleField>
+            </Col>
+          ) : null}
+
+          {openingRule.frequencyType === "weekly" ? (
+            <Col xs={24} md={12}>
+              <RuleField label="每周发团日">
+                <Select
+                  mode="multiple"
+                  value={openingRule.weekdays ?? []}
+                  options={weekdayOptions}
+                  placeholder="选择星期"
+                  className="full-width"
+                  onChange={(weekdays) => updateRule({ weekdays })}
+                />
+              </RuleField>
+            </Col>
+          ) : null}
+
+          <Col xs={24} md={12}>
+            <RuleField label="出发日限制">
+              <Select
+                value={openingRule.allowedDepartureRule?.type ?? "none"}
+                options={departureRuleOptions}
+                className="full-width"
+                onChange={(type) =>
+                  updateRule({
+                    allowedDepartureRule: buildAllowedDepartureRule(
+                      type,
+                      openingRule.allowedDepartureRule?.weekdays,
+                    ),
                   })
                 }
               />
             </RuleField>
           </Col>
-        ) : null}
 
-        <Col xs={24} md={12}>
-          <RuleField label="首选出发日">
-            <Select
-              mode="multiple"
-              value={rule.preferredWeekdays}
-              options={weekdayOptions}
-              placeholder="可不选"
-              className="full-width"
-              onChange={(preferredWeekdays) =>
-                onUpdateBusinessRule({ ...rule, preferredWeekdays })
-              }
-            />
-          </RuleField>
-        </Col>
+          {openingRule.allowedDepartureRule?.type === "weekdays" ? (
+            <Col xs={24} md={12}>
+              <RuleField label="允许星期">
+                <Select
+                  mode="multiple"
+                  value={openingRule.allowedDepartureRule.weekdays ?? []}
+                  options={weekdayOptions}
+                  placeholder="选择允许星期"
+                  className="full-width"
+                  onChange={(weekdays) =>
+                    updateRule({
+                      allowedDepartureRule: buildAllowedDepartureRule("weekdays", weekdays),
+                    })
+                  }
+                />
+              </RuleField>
+            </Col>
+          ) : null}
 
-        <Col xs={24} md={12}>
-          <RuleField label="次选出发日">
-            <Select
-              mode="multiple"
-              value={rule.fallbackWeekdays}
-              options={weekdayOptions}
-              placeholder="可不选"
-              className="full-width"
-              onChange={(fallbackWeekdays) =>
-                onUpdateBusinessRule({ ...rule, fallbackWeekdays })
-              }
-            />
-          </RuleField>
-        </Col>
+          <Col xs={24} md={12}>
+            <RuleField label="首选出发日">
+              <Select
+                mode="multiple"
+                value={openingRule.preferredWeekdays ?? []}
+                options={weekdayOptions}
+                placeholder="可不选"
+                className="full-width"
+                onChange={(preferredWeekdays) => updateRule({ preferredWeekdays })}
+              />
+            </RuleField>
+          </Col>
 
-        <Col xs={24} md={12}>
-          <RuleField label="库存预占">
-            <Switch
-              checked={!rule.skipInventoryLock}
-              checkedChildren="预占"
-              unCheckedChildren="不预占"
-              onChange={(shouldLock) =>
-                onUpdateBusinessRule({ ...rule, skipInventoryLock: !shouldLock })
-              }
-            />
-          </RuleField>
-        </Col>
-      </Row>
+          <Col xs={24} md={12}>
+            <RuleField label="次选出发日">
+              <Select
+                mode="multiple"
+                value={openingRule.fallbackWeekdays ?? []}
+                options={weekdayOptions}
+                placeholder="可不选"
+                className="full-width"
+                onChange={(fallbackWeekdays) => updateRule({ fallbackWeekdays })}
+              />
+            </RuleField>
+          </Col>
+        </Row>
+
+        <Space direction="vertical" size={6} className="full-width">
+          <Text strong>房型偏好</Text>
+          <Space wrap size={[4, 4]}>
+            {openingConfig.roomTypePreferences.map((preference) => (
+              <Tag
+                key={`${openingConfig.productCode}-${openingConfig.itineraryCode}-${preference.hotelCode}-${preference.description}`}
+              >
+                {preference.hotelCode} / {preference.roomTypeCode ?? preference.roomClass}
+              </Tag>
+            ))}
+          </Space>
+        </Space>
+      </Space>
     </Card>
   );
 }
@@ -403,18 +367,52 @@ function RuleField({
   );
 }
 
-function normalizeFrequencyRule(rule: BusinessFrequencyRule): BusinessFrequencyRule {
-  if (rule.frequencyType === "daily") {
+function findProduct(products: Product[], openingConfig: ProductOpeningConfig) {
+  return (
+    products.find(
+      (product) =>
+        product.productCode === openingConfig.productCode &&
+        product.itineraryCode === openingConfig.itineraryCode,
+    ) ?? products.find((product) => product.productCode === openingConfig.productCode)
+  );
+}
+
+function getOpeningRule(
+  openingConfig: ProductOpeningConfig,
+  businessRule?: BusinessFrequencyRule,
+): OpeningRuleOverride {
+  return {
+    frequencyType: openingConfig.overrideRule?.frequencyType ?? businessRule?.frequencyType ?? "daily",
+    weekdays: openingConfig.overrideRule?.weekdays ?? businessRule?.weekdays,
+    intervalDays: openingConfig.overrideRule?.intervalDays ?? businessRule?.intervalDays,
+    allowedDepartureRule:
+      openingConfig.overrideRule?.allowedDepartureRule ??
+      businessRule?.allowedDepartureRule ??
+      buildAllowedDepartureRule("none"),
+    preferredWeekdays:
+      openingConfig.overrideRule?.preferredWeekdays ?? businessRule?.preferredWeekdays ?? [],
+    fallbackWeekdays:
+      openingConfig.overrideRule?.fallbackWeekdays ?? businessRule?.fallbackWeekdays ?? [],
+  };
+}
+
+function normalizeFrequencyRule(
+  rule: OpeningRuleOverride,
+  frequencyType: NonNullable<OpeningRuleOverride["frequencyType"]>,
+): OpeningRuleOverride {
+  if (frequencyType === "daily") {
     return {
       ...rule,
+      frequencyType,
       intervalDays: undefined,
       weekdays: undefined,
     };
   }
 
-  if (rule.frequencyType === "intervalDays") {
+  if (frequencyType === "intervalDays") {
     return {
       ...rule,
+      frequencyType,
       intervalDays: rule.intervalDays ?? 2,
       weekdays: undefined,
     };
@@ -422,6 +420,7 @@ function normalizeFrequencyRule(rule: BusinessFrequencyRule): BusinessFrequencyR
 
   return {
     ...rule,
+    frequencyType,
     weekdays: rule.weekdays && rule.weekdays.length > 0 ? rule.weekdays : [6],
     intervalDays: undefined,
   };

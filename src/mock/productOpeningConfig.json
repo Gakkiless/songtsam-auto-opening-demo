@@ -1,9 +1,21 @@
 [
   {
     "productCode": "P001",
+    "itineraryCode": "IT-XMMLB-7D",
     "enabled": true,
     "defaultGroupSize": 12,
     "defaultRoomCount": 6,
+    "overrideRule": {
+      "frequencyType": "weekly",
+      "weekdays": [6],
+      "allowedDepartureRule": {
+        "type": "weekdays",
+        "weekdays": [6],
+        "description": "只能周六出发"
+      },
+      "preferredWeekdays": [6],
+      "fallbackWeekdays": [5]
+    },
     "roomTypePreferences": [
       {
         "hotelCode": "H-XGLL",
@@ -28,11 +40,44 @@
     ]
   },
   {
-    "productCode": "P002",
+    "productCode": "P001",
+    "itineraryCode": "IT-XMX-4D",
     "enabled": true,
     "defaultGroupSize": 10,
     "defaultRoomCount": 5,
     "overrideRule": {
+      "frequencyType": "weekly",
+      "weekdays": [5],
+      "allowedDepartureRule": {
+        "type": "weekdays",
+        "weekdays": [5, 6],
+        "description": "只能周五、周六出发"
+      },
+      "preferredWeekdays": [5],
+      "fallbackWeekdays": [6]
+    },
+    "roomTypePreferences": [
+      {
+        "hotelCode": "H-XGLL",
+        "roomClass": "双床",
+        "description": "短线主题团默认双床"
+      },
+      {
+        "hotelCode": "H-ML",
+        "roomClass": "双床",
+        "description": "短线主题团默认双床"
+      }
+    ]
+  },
+  {
+    "productCode": "P002",
+    "itineraryCode": "IT-LLL-4D",
+    "enabled": true,
+    "defaultGroupSize": 10,
+    "defaultRoomCount": 5,
+    "overrideRule": {
+      "frequencyType": "weekly",
+      "weekdays": [6],
       "allowedDepartureRule": {
         "type": "evenDays",
         "description": "只能双数日出发"
@@ -50,9 +95,20 @@
   },
   {
     "productCode": "P003",
+    "itineraryCode": "IT-XXMM-5D",
     "enabled": true,
     "defaultGroupSize": 4,
     "defaultRoomCount": 2,
+    "overrideRule": {
+      "frequencyType": "intervalDays",
+      "intervalDays": 2,
+      "allowedDepartureRule": {
+        "type": "none",
+        "description": "不限出发日"
+      },
+      "preferredWeekdays": [],
+      "fallbackWeekdays": []
+    },
     "roomTypePreferences": [
       {
         "hotelCode": "H-XGLL",
@@ -67,10 +123,50 @@
     ]
   },
   {
+    "productCode": "P003",
+    "itineraryCode": "IT-XBX-3D",
+    "enabled": true,
+    "defaultGroupSize": 4,
+    "defaultRoomCount": 2,
+    "overrideRule": {
+      "frequencyType": "daily",
+      "allowedDepartureRule": {
+        "type": "none",
+        "description": "不限出发日"
+      },
+      "preferredWeekdays": [],
+      "fallbackWeekdays": []
+    },
+    "roomTypePreferences": [
+      {
+        "hotelCode": "H-XGLL",
+        "roomClass": "大床",
+        "description": "自由行默认基础大床"
+      },
+      {
+        "hotelCode": "H-BZL",
+        "roomClass": "大床",
+        "description": "奔子栏默认基础大床"
+      }
+    ]
+  },
+  {
     "productCode": "P004",
+    "itineraryCode": "IT-MMBBX-6D",
     "enabled": true,
     "defaultGroupSize": 6,
     "defaultRoomCount": 3,
+    "overrideRule": {
+      "frequencyType": "intervalDays",
+      "intervalDays": 3,
+      "allowedDepartureRule": {
+        "type": "weekdays",
+        "weekdays": [1, 4],
+        "description": "仅周一、周四出发"
+      },
+      "preferredWeekdays": [4],
+      "fallbackWeekdays": [1]
+    },
     "roomTypePreferences": [
       {
         "hotelCode": "H-ML",
@@ -91,9 +187,19 @@
   },
   {
     "productCode": "P005",
+    "itineraryCode": "IT-LLL-PKG",
     "enabled": true,
     "defaultGroupSize": 2,
     "defaultRoomCount": 1,
+    "overrideRule": {
+      "frequencyType": "daily",
+      "allowedDepartureRule": {
+        "type": "none",
+        "description": "不限出发日"
+      },
+      "preferredWeekdays": [],
+      "fallbackWeekdays": []
+    },
     "roomTypePreferences": [
       {
         "hotelCode": "H-LS",

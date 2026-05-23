@@ -12,8 +12,7 @@
         "description": "默认只能周六出发"
       },
       "preferredWeekdays": [6],
-      "fallbackWeekdays": [5],
-      "skipInventoryLock": false
+      "fallbackWeekdays": [5]
     },
     {
       "businessType": "自由行",
@@ -26,8 +25,7 @@
         "description": "不限出发日"
       },
       "preferredWeekdays": [],
-      "fallbackWeekdays": [],
-      "skipInventoryLock": false
+      "fallbackWeekdays": []
     },
     {
       "businessType": "私享管家",
@@ -41,21 +39,19 @@
         "description": "默认仅周一、周四出发"
       },
       "preferredWeekdays": [4],
-      "fallbackWeekdays": [1],
-      "skipInventoryLock": false
+      "fallbackWeekdays": [1]
     },
     {
       "businessType": "目的地套餐",
       "enabled": true,
-      "label": "每日开团，不预占酒店资源",
+      "label": "每日开团",
       "frequencyType": "daily",
       "allowedDepartureRule": {
         "type": "none",
         "description": "不限出发日"
       },
       "preferredWeekdays": [],
-      "fallbackWeekdays": [],
-      "skipInventoryLock": true
+      "fallbackWeekdays": []
     }
   ],
   "roomLevelPriority": ["基础"],
