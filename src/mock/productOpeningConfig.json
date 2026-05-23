@@ -2,7 +2,6 @@
   {
     "productCode": "P001",
     "itineraryCode": "IT-XMMLB-7D",
-    "enabled": true,
     "defaultGroupSize": 12,
     "defaultRoomCount": 6,
     "overrideRule": {
@@ -42,7 +41,6 @@
   {
     "productCode": "P001",
     "itineraryCode": "IT-XMX-4D",
-    "enabled": true,
     "defaultGroupSize": 10,
     "defaultRoomCount": 5,
     "overrideRule": {
@@ -72,7 +70,6 @@
   {
     "productCode": "P002",
     "itineraryCode": "IT-LLL-4D",
-    "enabled": true,
     "defaultGroupSize": 10,
     "defaultRoomCount": 5,
     "overrideRule": {
@@ -96,7 +93,6 @@
   {
     "productCode": "P003",
     "itineraryCode": "IT-XXMM-5D",
-    "enabled": true,
     "defaultGroupSize": 4,
     "defaultRoomCount": 2,
     "overrideRule": {
@@ -125,7 +121,6 @@
   {
     "productCode": "P003",
     "itineraryCode": "IT-XBX-3D",
-    "enabled": true,
     "defaultGroupSize": 4,
     "defaultRoomCount": 2,
     "overrideRule": {
@@ -153,7 +148,6 @@
   {
     "productCode": "P004",
     "itineraryCode": "IT-MMBBX-6D",
-    "enabled": true,
     "defaultGroupSize": 6,
     "defaultRoomCount": 3,
     "overrideRule": {
@@ -188,7 +182,6 @@
   {
     "productCode": "P005",
     "itineraryCode": "IT-LLL-PKG",
-    "enabled": true,
     "defaultGroupSize": 2,
     "defaultRoomCount": 1,
     "overrideRule": {

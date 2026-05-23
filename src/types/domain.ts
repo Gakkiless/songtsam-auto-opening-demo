@@ -47,7 +47,6 @@ export interface OpeningRuleOverride {
 export interface ProductOpeningConfig {
   productCode: string;
   itineraryCode?: string;
-  enabled?: boolean;
   defaultGroupSize: number;
   defaultRoomCount: number;
   overrideRule?: OpeningRuleOverride;
@@ -106,7 +105,6 @@ export interface StrategyConfig {
 export interface ResolvedOpeningConfig {
   productCode: string;
   itineraryCode?: string;
-  enabled: boolean;
   defaultGroupSize: number;
   defaultRoomCount: number;
   frequencyType: FrequencyType;

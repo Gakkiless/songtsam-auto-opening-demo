@@ -20,7 +20,6 @@ import {
   Row,
   Select,
   Space,
-  Switch,
   Statistic,
   Table,
   Tag,
@@ -328,9 +327,6 @@ export function AutoOpeningPage({
                     <Descriptions.Item label="酒店简称">
                       {getItineraryShortCode(product)}
                     </Descriptions.Item>
-                    <Descriptions.Item label="参与基本盘">
-                      {resolvedOpeningConfig?.enabled ? <Tag color="green">是</Tag> : <Tag>否</Tag>}
-                    </Descriptions.Item>
                   </Descriptions>
 
                   {openingConfig ? (
@@ -460,15 +456,9 @@ function InlineItineraryConfig({
 
   return (
     <div className="inline-itinerary-config">
-      <Space align="center" className="full-width inline-config-header">
+      <div className="inline-config-header">
         <Text strong>本行程开团配置</Text>
-        <Switch
-          checked={openingConfig.enabled ?? true}
-          checkedChildren="参与"
-          unCheckedChildren="不参与"
-          onChange={(enabled) => updateConfig({ enabled })}
-        />
-      </Space>
+      </div>
 
       <Row gutter={[12, 12]}>
         <Col xs={24} md={12}>

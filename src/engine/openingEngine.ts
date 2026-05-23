@@ -348,8 +348,6 @@ export function generateOpeningPlans(params: {
 
     const openingConfig = resolvedConfig.openingConfig;
 
-    if (!openingConfig.enabled) return;
-
     const candidateDates = generateCandidateDepartureDates(
       product,
       monthDates,
@@ -492,7 +490,6 @@ export function resolveOpeningConfig(
     openingConfig: {
       productCode: product.productCode,
       itineraryCode: productConfig.itineraryCode,
-      enabled: productConfig.enabled ?? businessRule.enabled,
       defaultGroupSize: productConfig.defaultGroupSize,
       defaultRoomCount: productConfig.defaultRoomCount,
       frequencyType: overrideRule.frequencyType ?? businessRule.frequencyType,
