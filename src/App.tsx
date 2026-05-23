@@ -5,6 +5,7 @@ import {
   DashboardOutlined,
   FileDoneOutlined,
   FileTextOutlined,
+  HistoryOutlined,
   TableOutlined,
 } from "@ant-design/icons";
 import { ConfigProvider, Layout, Segmented, Space, Tag, Typography, theme } from "antd";
@@ -17,17 +18,19 @@ import {
 } from "./config/data";
 import { generateOpeningPayload, generateOpeningPlans } from "./engine/openingEngine";
 import { AutoOpeningPage } from "./pages/AutoOpeningPage";
+import { ExecutionResultPage } from "./pages/ExecutionResultPage";
 import { InventoryPage } from "./pages/InventoryPage";
 import { OpeningPlanPage } from "./pages/OpeningPlanPage";
 import { PayloadPage } from "./pages/PayloadPage";
 import type {
   GenerateOpeningResult,
-  OpeningPayload,
+  OpeningExecutionRecord,
+  OpeningPlan,
   Product,
   ProductOpeningConfig,
 } from "./types/domain";
 
-type TabKey = "home" | "plans" | "inventory" | "payload";
+type TabKey = "home" | "plans" | "executions" | "inventory" | "payload";
 
 export interface ProductOption {
   productCode: string;
@@ -42,6 +45,7 @@ const { Text, Title } = Typography;
 const tabs = [
   { value: "home" as const, label: "自动开团", icon: <DashboardOutlined /> },
   { value: "plans" as const, label: "待确认计划", icon: <FileDoneOutlined /> },
+  { value: "executions" as const, label: "开团结果", icon: <HistoryOutlined /> },
   { value: "inventory" as const, label: "酒店资源占用表", icon: <TableOutlined /> },
   { value: "payload" as const, label: "Payload 预览", icon: <FileTextOutlined /> },
 ];
@@ -56,8 +60,8 @@ function App() {
   const [selectionError, setSelectionError] = useState("");
   const [result, setResult] = useState<GenerateOpeningResult | null>(null);
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
-  const [executedPayloads, setExecutedPayloads] = useState<OpeningPayload[]>([]);
-  const [executionMessage, setExecutionMessage] = useState("");
+  const [executionHistory, setExecutionHistory] = useState<OpeningExecutionRecord[]>([]);
+  const [latestBatchId, setLatestBatchId] = useState("");
   const [openingConfigs, setOpeningConfigs] = useState<ProductOpeningConfig[]>(() =>
     cloneValue(initialProductOpeningConfigs),
   );
@@ -84,8 +88,6 @@ function App() {
   const resetGeneratedState = () => {
     setResult(null);
     setSelectedPlanIds([]);
-    setExecutedPayloads([]);
-    setExecutionMessage("");
   };
 
   const handleDateRangeChange = (nextStartDate: string, nextEndDate: string) => {
@@ -165,8 +167,6 @@ function App() {
     console.info("mock opening payloads", nextResult.payloads);
     setResult(nextResult);
     setSelectedPlanIds(openablePlanIds);
-    setExecutedPayloads([]);
-    setExecutionMessage("");
     setActiveTab("plans");
   };
 
@@ -186,14 +186,30 @@ function App() {
   const handleConfirmOpenings = () => {
     if (!result) return;
     const plansToOpen = result.openingPlans.filter((plan) => selectedPlanIds.includes(plan.planId));
-    const payloadsToExecute = plansToOpen.map((plan) => generateOpeningPayload(plan));
-
-    console.info("mock execute opening api", payloadsToExecute);
-    setExecutedPayloads(payloadsToExecute);
-    setExecutionMessage(
-      `已模拟执行 ${payloadsToExecute.length} 条开团接口；真实系统会在这里重新校验库存并提交开团。`,
+    const batchId = createExecutionBatchId();
+    const executedAt = new Date().toISOString();
+    const executionRecords = plansToOpen.map((plan, index) =>
+      createMockExecutionRecord(plan, index, batchId, executedAt),
     );
-    setActiveTab("payload");
+
+    console.info("mock execute opening api result", executionRecords);
+    setExecutionHistory((currentRecords) => [...executionRecords, ...currentRecords]);
+    setLatestBatchId(batchId);
+    setSelectedPlanIds([]);
+    setActiveTab("executions");
+  };
+
+  const handleExportExecutionHistory = () => {
+    if (executionHistory.length === 0) return;
+
+    const csv = toExecutionCsv(executionHistory);
+    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `songtsam-opening-history-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleUpdateProductOpeningConfig = (nextConfig: ProductOpeningConfig) => {
@@ -300,14 +316,15 @@ function App() {
               onConfirmOpenings={handleConfirmOpenings}
             />
           ) : null}
-          {activeTab === "inventory" ? <InventoryPage rows={result?.inventoryRows ?? []} /> : null}
-          {activeTab === "payload" ? (
-            <PayloadPage
-              payloads={result?.payloads ?? []}
-              executedPayloads={executedPayloads}
-              executionMessage={executionMessage}
+          {activeTab === "executions" ? (
+            <ExecutionResultPage
+              records={executionHistory}
+              latestBatchId={latestBatchId}
+              onExport={handleExportExecutionHistory}
             />
           ) : null}
+          {activeTab === "inventory" ? <InventoryPage rows={result?.inventoryRows ?? []} /> : null}
+          {activeTab === "payload" ? <PayloadPage payloads={result?.payloads ?? []} /> : null}
         </Content>
       </Layout>
     </ConfigProvider>
@@ -338,6 +355,109 @@ function buildProductOptions(productItineraries: Product[]): ProductOption[] {
   return [...optionByProductCode.values()].sort((a, b) =>
     `${a.productCode}-${a.productName}`.localeCompare(`${b.productCode}-${b.productName}`, "zh-CN"),
   );
+}
+
+function createExecutionBatchId() {
+  const now = new Date();
+  const stamp = now.toISOString().replace(/\D/g, "").slice(0, 14);
+  return `BATCH-${stamp}`;
+}
+
+function createMockExecutionRecord(
+  plan: OpeningPlan,
+  index: number,
+  batchId: string,
+  executedAt: string,
+): OpeningExecutionRecord {
+  const payload = generateOpeningPayload(plan);
+  const failed = shouldMockOpeningFail(plan, index);
+
+  return {
+    executionId: `${batchId}-${plan.planId}`,
+    batchId,
+    executedAt,
+    planId: plan.planId,
+    productCode: plan.productCode,
+    productName: plan.productName,
+    itineraryCode: plan.itineraryCode,
+    itineraryName: plan.itineraryName,
+    businessType: plan.businessType,
+    departureDate: plan.departureDate,
+    groupSize: plan.groupSize,
+    roomSummary: summarizePlanRooms(plan),
+    status: failed ? "开团失败" : "开团成功",
+    groupPeriodNo: failed ? undefined : createGroupPeriodNo(plan, index),
+    failureReason: failed
+      ? "mock 开团接口返回库存状态已变化，请重新生成计划后再确认。"
+      : undefined,
+    payload,
+  };
+}
+
+function shouldMockOpeningFail(plan: OpeningPlan, index: number) {
+  const dayOfMonth = Number(plan.departureDate.slice(8, 10));
+  return dayOfMonth % 10 === 0 || (index + 1) % 7 === 0;
+}
+
+function createGroupPeriodNo(plan: OpeningPlan, index: number) {
+  return `TQ-${plan.departureDate.replace(/-/g, "")}-${plan.productCode}-${String(index + 1).padStart(3, "0")}`;
+}
+
+function summarizePlanRooms(plan: OpeningPlan) {
+  const roomSummaryByType = new Map<string, { name: string; quantity: number }>();
+
+  plan.resourceUsage.forEach((usage) => {
+    const existing = roomSummaryByType.get(usage.roomTypeCode);
+    roomSummaryByType.set(usage.roomTypeCode, {
+      name: usage.roomTypeName,
+      quantity: Math.max(existing?.quantity ?? 0, usage.quantity),
+    });
+  });
+
+  const summaries = [...roomSummaryByType.values()]
+    .sort((a, b) => a.name.localeCompare(b.name, "zh-CN"))
+    .map((summary) => `${summary.name} ${summary.quantity} 间`);
+
+  return summaries.length > 0 ? summaries.join("、") : `${plan.roomCount} 间`;
+}
+
+function toExecutionCsv(records: OpeningExecutionRecord[]) {
+  const headers = [
+    "执行批次",
+    "执行时间",
+    "执行状态",
+    "团期号",
+    "失败原因",
+    "出发日期",
+    "业务类型",
+    "产品代码",
+    "产品名称",
+    "行程代码",
+    "行程名称",
+    "最大人数库存",
+    "房型房数",
+  ];
+  const rows = records.map((record) => [
+    record.batchId,
+    record.executedAt,
+    record.status,
+    record.groupPeriodNo ?? "",
+    record.failureReason ?? "",
+    record.departureDate,
+    record.businessType,
+    record.productCode,
+    record.productName,
+    record.itineraryCode,
+    record.itineraryName,
+    String(record.groupSize),
+    record.roomSummary,
+  ]);
+
+  return [headers, ...rows].map((row) => row.map(escapeCsvValue).join(",")).join("\n");
+}
+
+function escapeCsvValue(value: string) {
+  return `"${value.replace(/"/g, '""')}"`;
 }
 
 export default App;

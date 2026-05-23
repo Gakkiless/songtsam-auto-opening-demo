@@ -6,12 +6,8 @@ const { Text, Paragraph } = Typography;
 
 export function PayloadPage({
   payloads,
-  executedPayloads,
-  executionMessage,
 }: {
   payloads: OpeningPayload[];
-  executedPayloads: OpeningPayload[];
-  executionMessage: string;
 }) {
   if (payloads.length === 0) {
     return (
@@ -32,19 +28,11 @@ export function PayloadPage({
       extra={<Text type="secondary">生成计划后先预览，产品运营确认后再模拟执行开团接口</Text>}
     >
       <Space direction="vertical" size={16} className="full-width">
-        {executionMessage ? <Alert type="success" showIcon title={executionMessage} /> : null}
-        {executedPayloads.length > 0 ? (
-          <Alert
-            type="info"
-            showIcon
-            title={`已执行 mock 开团接口 ${executedPayloads.length} 条`}
-            description={
-              <>
-                浏览器控制台输出 key 为 <Text code>mock execute opening api</Text>。
-              </>
-            }
-          />
-        ) : null}
+        <Alert
+          type="info"
+          showIcon
+          title="这里只展示可开团计划的 mock 请求参数；确认执行后的成功、失败和团期号请在“开团结果”页查看。"
+        />
 
         <Row gutter={[16, 16]}>
           {payloads.map((payload) => (

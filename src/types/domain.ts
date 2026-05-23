@@ -3,6 +3,7 @@ export type RoomClass = "大床" | "双床";
 export type RoomLevel = "基础" | "高级";
 export type FrequencyType = "weekly" | "intervalDays" | "daily";
 export type OpeningPlanStatus = "可开团" | "资源不足" | "规则冲突";
+export type OpeningExecutionStatus = "开团成功" | "开团失败";
 
 export interface AllowedDepartureRule {
   type: "none" | "oddDays" | "evenDays" | "weekdays";
@@ -204,6 +205,25 @@ export interface OpeningPayload {
   departureDate: string;
   groupSize: number;
   resourceList: OpeningPayloadResource[];
+}
+
+export interface OpeningExecutionRecord {
+  executionId: string;
+  batchId: string;
+  executedAt: string;
+  planId: string;
+  productCode: string;
+  productName: string;
+  itineraryCode: string;
+  itineraryName: string;
+  businessType: BusinessType;
+  departureDate: string;
+  groupSize: number;
+  roomSummary: string;
+  status: OpeningExecutionStatus;
+  groupPeriodNo?: string;
+  failureReason?: string;
+  payload: OpeningPayload;
 }
 
 export interface InventoryViewRow {
