@@ -24,7 +24,6 @@ import {
   Statistic,
   Table,
   Tag,
-  Tooltip,
   Typography,
 } from "antd";
 import { useState, type CSSProperties, type ReactNode } from "react";
@@ -319,6 +318,11 @@ export function AutoOpeningPage({
         <Row gutter={[16, 16]}>
           {selectedProducts.map((product) => {
             const openingConfig = getProductOpeningConfig(productOpeningConfigs, product);
+            const resolvedOpeningConfig = resolveOpeningConfig(
+              product,
+              productOpeningConfigs,
+              config.businessTypeOpeningRules,
+            ).openingConfig;
 
             return (
               <Col xs={24} xl={12} key={getProductItineraryKey(product)}>
@@ -326,18 +330,19 @@ export function AutoOpeningPage({
                   title={
                     <Space wrap className="itinerary-card-title">
                       <span>{product.productName}</span>
+                      <Button
+                        aria-label={`配置${product.itineraryName}开团规则`}
+                        type="primary"
+                        ghost
+                        size="small"
+                        icon={<SettingOutlined />}
+                        className="config-action-button"
+                        disabled={!openingConfig}
+                        onClick={() => setConfigModalKey(getProductItineraryKey(product))}
+                      >
+                        开团配置
+                      </Button>
                       <Tag color="blue">{product.businessType}</Tag>
-                      <Tooltip title="配置开团规则">
-                        <Button
-                          aria-label={`配置${product.itineraryName}开团规则`}
-                          type="text"
-                          size="small"
-                          icon={<SettingOutlined />}
-                          className="config-icon-button"
-                          disabled={!openingConfig}
-                          onClick={() => setConfigModalKey(getProductItineraryKey(product))}
-                        />
-                      </Tooltip>
                     </Space>
                   }
                 >
@@ -350,6 +355,10 @@ export function AutoOpeningPage({
                       {getItineraryShortCode(product)}
                     </Descriptions.Item>
                   </Descriptions>
+
+                  {openingConfig ? (
+                    <OpeningConfigSummary resolvedOpeningConfig={resolvedOpeningConfig} />
+                  ) : null}
 
                   {!openingConfig ? (
                     <Alert type="error" showIcon title="未找到该产品行程的开团配置。" />
@@ -459,6 +468,37 @@ function getProductOpeningConfig(configs: ProductOpeningConfig[], product: Produ
         openingConfig.productCode === product.productCode &&
         openingConfig.itineraryCode === product.itineraryCode,
     ) ?? configs.find((openingConfig) => openingConfig.productCode === product.productCode)
+  );
+}
+
+function OpeningConfigSummary({
+  resolvedOpeningConfig,
+}: {
+  resolvedOpeningConfig: ReturnType<typeof resolveOpeningConfig>["openingConfig"];
+}) {
+  if (!resolvedOpeningConfig) {
+    return (
+      <div className="itinerary-config-summary">
+        <Text type="secondary">未找到可用开团配置</Text>
+      </div>
+    );
+  }
+
+  return (
+    <div className="itinerary-config-summary">
+      <Space wrap size={[6, 8]}>
+        <Tag color="blue">最大人数 {resolvedOpeningConfig.defaultGroupSize}</Tag>
+        <Tag color="blue">房间 {resolvedOpeningConfig.defaultRoomCount} 间</Tag>
+        <Tag>{getFrequencyLabel(resolvedOpeningConfig)}</Tag>
+        <Tag>{resolvedOpeningConfig.allowedDepartureRule.description}</Tag>
+        <Tag>
+          {formatPreferredWeekdays(
+            resolvedOpeningConfig.preferredWeekdays,
+            resolvedOpeningConfig.fallbackWeekdays,
+          )}
+        </Tag>
+      </Space>
+    </div>
   );
 }
 

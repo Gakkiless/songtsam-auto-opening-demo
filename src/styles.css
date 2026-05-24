@@ -104,8 +104,16 @@ select {
   min-width: 0;
 }
 
-.config-icon-button {
-  color: #1677ff;
+.config-action-button {
+  margin-left: 2px;
+}
+
+.itinerary-config-summary {
+  margin: -4px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #f8fbff;
 }
 
 .inline-itinerary-config {
