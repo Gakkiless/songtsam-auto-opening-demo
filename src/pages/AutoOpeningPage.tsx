@@ -1,5 +1,4 @@
 import {
-  CalendarOutlined,
   CheckCircleOutlined,
   DeleteOutlined,
   PlusOutlined,
@@ -13,9 +12,9 @@ import {
   Button,
   Card,
   Col,
+  DatePicker,
   Descriptions,
   Empty,
-  Input,
   InputNumber,
   Modal,
   Row,
@@ -26,6 +25,7 @@ import {
   Tag,
   Typography,
 } from "antd";
+import dayjs from "dayjs";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import {
   formatWeekdays,
@@ -42,6 +42,7 @@ import type {
 } from "../types/domain";
 
 const { Text } = Typography;
+const { RangePicker } = DatePicker;
 
 const weekdayOptions = [
   { label: "周日", value: 0 },
@@ -153,26 +154,20 @@ export function AutoOpeningPage({
             <Space direction="vertical" size={14} className="full-width">
               <div>
                 <Text strong>日期区间</Text>
-                <Row gutter={10} className="control-input">
-                  <Col span={12}>
-                    <Input
-                      aria-label="开始日期"
-                      type="date"
-                      value={startDate}
-                      onChange={(event) => onDateRangeChange(event.target.value, endDate)}
-                      prefix={<CalendarOutlined />}
-                    />
-                  </Col>
-                  <Col span={12}>
-                    <Input
-                      aria-label="结束日期"
-                      type="date"
-                      value={endDate}
-                      onChange={(event) => onDateRangeChange(startDate, event.target.value)}
-                      prefix={<CalendarOutlined />}
-                    />
-                  </Col>
-                </Row>
+                <RangePicker
+                  allowClear={false}
+                  aria-label="日期区间"
+                  className="full-width control-input"
+                  format="YYYY-MM-DD"
+                  inputReadOnly
+                  value={[dayjs(startDate), dayjs(endDate)]}
+                  onChange={(_, dateStrings) => {
+                    const [nextStartDate, nextEndDate] = dateStrings;
+                    if (nextStartDate && nextEndDate) {
+                      onDateRangeChange(nextStartDate, nextEndDate);
+                    }
+                  }}
+                />
               </div>
 
               <div>
