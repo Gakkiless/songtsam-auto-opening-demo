@@ -6,14 +6,15 @@
     "defaultRoomCount": 6,
     "overrideRule": {
       "frequencyType": "weekly",
-      "weekdays": [6],
+      "weekdays": [
+        6
+      ],
       "allowedDepartureRule": {
-        "type": "weekdays",
-        "weekdays": [6],
-        "description": "只能周六出发"
+        "type": "none",
+        "description": "不限出发日"
       },
-      "preferredWeekdays": [6],
-      "fallbackWeekdays": [5]
+      "preferredWeekdays": [],
+      "fallbackWeekdays": []
     },
     "roomTypePreferences": [
       {
@@ -45,14 +46,15 @@
     "defaultRoomCount": 5,
     "overrideRule": {
       "frequencyType": "weekly",
-      "weekdays": [5],
+      "weekdays": [
+        5
+      ],
       "allowedDepartureRule": {
-        "type": "weekdays",
-        "weekdays": [5, 6],
-        "description": "只能周五、周六出发"
+        "type": "none",
+        "description": "不限出发日"
       },
-      "preferredWeekdays": [5],
-      "fallbackWeekdays": [6]
+      "preferredWeekdays": [],
+      "fallbackWeekdays": []
     },
     "roomTypePreferences": [
       {
@@ -74,12 +76,14 @@
     "defaultRoomCount": 5,
     "overrideRule": {
       "frequencyType": "weekly",
-      "weekdays": [6],
+      "weekdays": [
+        6
+      ],
       "allowedDepartureRule": {
-        "type": "evenDays",
-        "description": "只能双数日出发"
+        "type": "none",
+        "description": "不限出发日"
       },
-      "preferredWeekdays": [6],
+      "preferredWeekdays": [],
       "fallbackWeekdays": []
     },
     "roomTypePreferences": [
@@ -154,12 +158,11 @@
       "frequencyType": "intervalDays",
       "intervalDays": 3,
       "allowedDepartureRule": {
-        "type": "weekdays",
-        "weekdays": [1, 4],
-        "description": "仅周一、周四出发"
+        "type": "none",
+        "description": "不限出发日"
       },
-      "preferredWeekdays": [4],
-      "fallbackWeekdays": [1]
+      "preferredWeekdays": [],
+      "fallbackWeekdays": []
     },
     "roomTypePreferences": [
       {

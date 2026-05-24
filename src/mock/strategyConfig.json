@@ -3,16 +3,17 @@
     {
       "businessType": "主题团",
       "enabled": true,
-      "label": "每周 1 团，首选周六，次选周五",
+      "label": "每周 1 团",
       "frequencyType": "weekly",
-      "weekdays": [6],
+      "weekdays": [
+        6
+      ],
       "allowedDepartureRule": {
-        "type": "weekdays",
-        "weekdays": [6],
-        "description": "默认只能周六出发"
+        "type": "none",
+        "description": "不限出发日"
       },
-      "preferredWeekdays": [6],
-      "fallbackWeekdays": [5]
+      "preferredWeekdays": [],
+      "fallbackWeekdays": []
     },
     {
       "businessType": "自由行",
@@ -30,16 +31,15 @@
     {
       "businessType": "私享管家",
       "enabled": true,
-      "label": "每 3 天 1 团，首选周四，次选周一",
+      "label": "每 3 天 1 团",
       "frequencyType": "intervalDays",
       "intervalDays": 3,
       "allowedDepartureRule": {
-        "type": "weekdays",
-        "weekdays": [1, 4],
-        "description": "默认仅周一、周四出发"
+        "type": "none",
+        "description": "不限出发日"
       },
-      "preferredWeekdays": [4],
-      "fallbackWeekdays": [1]
+      "preferredWeekdays": [],
+      "fallbackWeekdays": []
     },
     {
       "businessType": "目的地套餐",
@@ -54,6 +54,8 @@
       "fallbackWeekdays": []
     }
   ],
-  "roomLevelPriority": ["基础"],
+  "roomLevelPriority": [
+    "基础"
+  ],
   "autoUseAdvancedRoom": false
 }
