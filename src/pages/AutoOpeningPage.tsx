@@ -123,12 +123,12 @@ export function AutoOpeningPage({
 
   const productSelectOptions = productOptions.map((product) => ({
     value: product.productCode,
-    label: `${product.productCode} / ${product.productName} / ${product.businessType} / ${product.itineraryCount} 条行程`,
+    label: `${product.productCode} / ${product.productName}`,
     searchText: `${product.productCode} ${product.productName} ${product.businessType}`.toLowerCase(),
   }));
   const itinerarySelectOptions = draftItineraryOptions.map((itinerary) => ({
     value: getProductItineraryKey(itinerary),
-    label: `${itinerary.itineraryCode} / ${itinerary.itineraryName} / ${getItineraryShortCode(itinerary)}`,
+    label: `${itinerary.itineraryCode} / ${itinerary.itineraryName} / ${itinerary.businessType}`,
     searchText:
       `${itinerary.productCode} ${itinerary.productName} ${itinerary.itineraryCode} ${itinerary.itineraryName} ${itinerary.businessType} ${getItineraryShortCode(itinerary)}`.toLowerCase(),
   }));
@@ -184,7 +184,7 @@ export function AutoOpeningPage({
                     )
                   }
                   suffixIcon={<SearchOutlined />}
-                  placeholder="输入产品代码、产品名称或业务类型"
+                  placeholder="输入产品代码或产品名称"
                   className="full-width control-input"
                 />
               </div>
@@ -206,7 +206,7 @@ export function AutoOpeningPage({
                   suffixIcon={<SearchOutlined />}
                   placeholder={
                     draftProductCode
-                      ? "输入行程代码、行程名称或酒店简称"
+                      ? "输入行程代码、行程名称或业务类型"
                       : "请先选择产品"
                   }
                   className="full-width control-input"
@@ -246,7 +246,7 @@ export function AutoOpeningPage({
                           onRemoveAddedItinerary(getProductItineraryKey(product));
                         }}
                       >
-                        {product.productCode} / {product.itineraryName}
+                        {product.productName} / {product.itineraryName} / {product.businessType}
                       </Tag>
                     ))}
                   </Space>
@@ -342,11 +342,12 @@ export function AutoOpeningPage({
                   }
                 >
                   <Descriptions column={{ xs: 1, md: 2 }} size="small" className="section-gap">
-                    <Descriptions.Item label="产品">{product.productCode}</Descriptions.Item>
-                    <Descriptions.Item label="行程">{product.itineraryCode}</Descriptions.Item>
+                    <Descriptions.Item label="产品">
+                      {product.productCode} / {product.productName}
+                    </Descriptions.Item>
                     <Descriptions.Item label="行程名称">{product.itineraryName}</Descriptions.Item>
-                    <Descriptions.Item label="行程天数">{product.tripDays} 天</Descriptions.Item>
-                    <Descriptions.Item label="酒店简称">
+                    <Descriptions.Item label="行程天数">{formatTripDuration(product)}</Descriptions.Item>
+                    <Descriptions.Item label="行程酒店">
                       {getItineraryShortCode(product)}
                     </Descriptions.Item>
                   </Descriptions>
@@ -454,6 +455,10 @@ function MetricCard({
 
 function getProductItineraryKey(product: Product): string {
   return `${product.productCode}|${product.itineraryCode}`;
+}
+
+function formatTripDuration(product: Product): string {
+  return `${product.tripDays} 天 ${product.dailyItinerary.length} 晚`;
 }
 
 function getProductOpeningConfig(configs: ProductOpeningConfig[], product: Product) {
