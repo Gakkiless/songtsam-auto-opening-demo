@@ -384,7 +384,9 @@ function createMockExecutionRecord(
     itineraryName: plan.itineraryName,
     businessType: plan.businessType,
     departureDate: plan.departureDate,
+    channels: plan.channels,
     groupSize: plan.groupSize,
+    priceConfig: plan.priceConfig,
     roomSummary: summarizePlanRooms(plan),
     status: failed ? "开团失败" : "开团成功",
     groupPeriodNo: failed ? undefined : createGroupPeriodNo(plan, index),
@@ -431,6 +433,9 @@ function toExecutionCsv(records: OpeningExecutionRecord[]) {
     "失败原因",
     "出发日期",
     "业务类型",
+    "渠道",
+    "价格类型",
+    "价格配置",
     "产品代码",
     "产品名称",
     "行程代码",
@@ -446,6 +451,9 @@ function toExecutionCsv(records: OpeningExecutionRecord[]) {
     record.failureReason ?? "",
     record.departureDate,
     record.businessType,
+    record.channels.join("、"),
+    record.priceConfig?.priceType ?? "",
+    summarizePriceConfig(record.priceConfig),
     record.productCode,
     record.productName,
     record.itineraryCode,
@@ -455,6 +463,27 @@ function toExecutionCsv(records: OpeningExecutionRecord[]) {
   ]);
 
   return [headers, ...rows].map((row) => row.map(escapeCsvValue).join(",")).join("\n");
+}
+
+function summarizePriceConfig(priceConfig: OpeningExecutionRecord["priceConfig"]) {
+  if (!priceConfig) return "";
+
+  if (priceConfig.priceType === "人") {
+    const guarantee = priceConfig.guaranteeAmount ? `，保底${priceConfig.guaranteeAmount}` : "";
+    return `成人价${priceConfig.adultPrice}，单间差${priceConfig.singleRoomSupplement}${guarantee}`;
+  }
+
+  if (priceConfig.priceType === "家庭") {
+    const familyPrices = priceConfig.familyPrices
+      .map(
+        (item) =>
+          `${item.familyCode}:大童${item.bigChildPrice}/中童${item.middleChildPrice}/幼童${item.smallChildPrice}`,
+      )
+      .join("；");
+    return `单间差${priceConfig.singleRoomSupplement}；${familyPrices}`;
+  }
+
+  return `${priceConfig.packagePeople}人套，${priceConfig.adultCount}成人价${priceConfig.packagePrice}`;
 }
 
 function escapeCsvValue(value: string) {

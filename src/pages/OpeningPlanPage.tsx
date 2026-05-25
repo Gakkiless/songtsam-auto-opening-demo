@@ -72,6 +72,14 @@ export function OpeningPlanPage({
       render: (_: ResolvedResourceUsage[], plan) => <RoomTypeSummary plan={plan} />,
     },
     {
+      title: "价格配置",
+      dataIndex: "priceConfig",
+      width: 250,
+      render: (priceConfig: OpeningPlan["priceConfig"]) => (
+        <Text>{summarizePlanPriceConfig(priceConfig)}</Text>
+      ),
+    },
+    {
       title: "状态",
       dataIndex: "status",
       width: 110,
@@ -110,7 +118,7 @@ export function OpeningPlanPage({
         dataSource={sortedPlans}
         columns={columns}
         pagination={{ pageSize: 10, showSizeChanger: false }}
-        scroll={{ x: 1380 }}
+        scroll={{ x: 1630 }}
         rowSelection={{
           selectedRowKeys: selectedPlanIds,
           getCheckboxProps: (record) => ({ disabled: record.status !== "可开团" }),
@@ -126,6 +134,21 @@ export function OpeningPlanPage({
       />
     </Card>
   );
+}
+
+function summarizePlanPriceConfig(priceConfig: OpeningPlan["priceConfig"]) {
+  if (!priceConfig) return "-";
+
+  if (priceConfig.priceType === "人") {
+    const guarantee = priceConfig.guaranteeAmount ? ` / 保底 ¥${priceConfig.guaranteeAmount}` : "";
+    return `人 / 成人 ¥${priceConfig.adultPrice} / 单间差 ¥${priceConfig.singleRoomSupplement}${guarantee}`;
+  }
+
+  if (priceConfig.priceType === "家庭") {
+    return `家庭 / ${priceConfig.familyPrices.length} 组枚举价 / 单间差 ¥${priceConfig.singleRoomSupplement}`;
+  }
+
+  return `套 / ${priceConfig.packagePeople} 人 / ¥${priceConfig.packagePrice}`;
 }
 
 function RoomTypeSummary({ plan }: { plan: OpeningPlan }) {

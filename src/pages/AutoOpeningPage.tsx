@@ -14,6 +14,7 @@ import {
   Col,
   DatePicker,
   Descriptions,
+  Divider,
   Empty,
   InputNumber,
   Modal,
@@ -35,7 +36,10 @@ import {
 import type {
   AllowedDepartureRule,
   GenerateOpeningResult,
+  OpeningChannel,
   OpeningRuleOverride,
+  PriceConfig,
+  PriceType,
   Product,
   ProductOpeningConfig,
   StrategyConfig,
@@ -65,6 +69,19 @@ const departureRuleOptions = [
   { label: "只能单数日", value: "oddDays" },
   { label: "只能双数日", value: "evenDays" },
   { label: "指定星期", value: "weekdays" },
+];
+
+const channelOptions: { label: OpeningChannel; value: OpeningChannel }[] = [
+  { label: "WECHAT", value: "WECHAT" },
+  { label: "CRS", value: "CRS" },
+  { label: "小红书", value: "小红书" },
+  { label: "招商银行", value: "招商银行" },
+];
+
+const priceTypeOptions: { label: PriceType; value: PriceType }[] = [
+  { label: "人", value: "人" },
+  { label: "家庭", value: "家庭" },
+  { label: "套", value: "套" },
 ];
 
 interface ProductOption {
@@ -417,6 +434,7 @@ export function AutoOpeningPage({
       >
         {configModalOpeningConfig ? (
           <InlineItineraryConfig
+            businessType={configModalProduct?.businessType ?? "主题团"}
             openingConfig={configModalOpeningConfig}
             resolvedOpeningConfig={configModalResolvedOpeningConfig}
             onUpdateProductOpeningConfig={onUpdateProductOpeningConfig}
@@ -489,6 +507,8 @@ function OpeningConfigSummary({
       <Space wrap size={[6, 8]}>
         <Tag color="blue">最大人数 {resolvedOpeningConfig.defaultGroupSize}</Tag>
         <Tag color="blue">房间 {resolvedOpeningConfig.defaultRoomCount} 间</Tag>
+        <Tag>渠道 {formatChannels(resolvedOpeningConfig.channels)}</Tag>
+        <Tag>价格 {formatPriceConfig(resolvedOpeningConfig.priceConfig)}</Tag>
         <Tag>{getFrequencyLabel(resolvedOpeningConfig)}</Tag>
         <Tag>{resolvedOpeningConfig.allowedDepartureRule.description}</Tag>
         <Tag>
@@ -503,10 +523,12 @@ function OpeningConfigSummary({
 }
 
 function InlineItineraryConfig({
+  businessType,
   openingConfig,
   resolvedOpeningConfig,
   onUpdateProductOpeningConfig,
 }: {
+  businessType: Product["businessType"];
   openingConfig: ProductOpeningConfig;
   resolvedOpeningConfig: ReturnType<typeof resolveOpeningConfig>["openingConfig"];
   onUpdateProductOpeningConfig: (config: ProductOpeningConfig) => void;
@@ -537,6 +559,19 @@ function InlineItineraryConfig({
       </div>
 
       <Row gutter={[12, 12]}>
+        <Col xs={24} md={12}>
+          <RuleField label="渠道">
+            <Select
+              mode="multiple"
+              value={openingConfig.channels}
+              options={channelOptions}
+              placeholder="选择渠道"
+              className="full-width"
+              onChange={(channels) => updateConfig({ channels })}
+            />
+          </RuleField>
+        </Col>
+
         <Col xs={24} md={12}>
           <RuleField label="默认人数">
             <InputNumber
@@ -687,7 +722,358 @@ function InlineItineraryConfig({
             )
           : "不配置"}
       </Text>
+
+      <Divider plain>
+        价格配置
+      </Divider>
+
+      <PriceConfigFields
+        businessType={businessType}
+        priceConfig={openingConfig.priceConfig}
+        onChange={(priceConfig) => updateConfig({ priceConfig })}
+      />
     </div>
+  );
+}
+
+function PriceConfigFields({
+  businessType,
+  priceConfig,
+  onChange,
+}: {
+  businessType: Product["businessType"];
+  priceConfig: PriceConfig;
+  onChange: (priceConfig: PriceConfig) => void;
+}) {
+  const allowedPriceTypes = getAllowedPriceTypes(businessType);
+  const priceTypeSelectOptions = priceTypeOptions.filter((option) =>
+    allowedPriceTypes.includes(option.value),
+  );
+
+  return (
+    <Space direction="vertical" size={12} className="full-width price-config-block">
+      <Row gutter={[12, 12]}>
+        <Col xs={24} md={12}>
+          <RuleField label="价格类型">
+            <Select
+              value={priceConfig.priceType}
+              options={priceTypeSelectOptions}
+              disabled={priceTypeSelectOptions.length === 1}
+              className="full-width"
+              onChange={(priceType) =>
+                onChange(buildDefaultPriceConfig(priceType, businessType, priceConfig))
+              }
+            />
+          </RuleField>
+        </Col>
+      </Row>
+
+      {priceConfig.priceType === "人" ? (
+        <PerPersonPriceFields
+          businessType={businessType}
+          priceConfig={priceConfig}
+          onChange={onChange}
+        />
+      ) : null}
+
+      {priceConfig.priceType === "家庭" ? (
+        <FamilyPriceFields priceConfig={priceConfig} onChange={onChange} />
+      ) : null}
+
+      {priceConfig.priceType === "套" ? (
+        <PackagePriceFields priceConfig={priceConfig} onChange={onChange} />
+      ) : null}
+    </Space>
+  );
+}
+
+function PerPersonPriceFields({
+  businessType,
+  priceConfig,
+  onChange,
+}: {
+  businessType: Product["businessType"];
+  priceConfig: Extract<PriceConfig, { priceType: "人" }>;
+  onChange: (priceConfig: PriceConfig) => void;
+}) {
+  const canConfigureGuarantee = businessType === "自由行" || businessType === "私享管家";
+
+  return (
+    <Row gutter={[12, 12]}>
+      <Col xs={24} md={12}>
+        <RuleField label="成人价">
+          <InputNumber
+            min={0}
+            addonBefore="¥"
+            value={priceConfig.adultPrice}
+            className="full-width"
+            onChange={(adultPrice) =>
+              onChange({ ...priceConfig, adultPrice: adultPrice ?? priceConfig.adultPrice })
+            }
+          />
+        </RuleField>
+      </Col>
+
+      <Col xs={24} md={12}>
+        <RuleField label="单间差">
+          <InputNumber
+            min={0}
+            addonBefore="¥"
+            value={priceConfig.singleRoomSupplement}
+            className="full-width"
+            onChange={(singleRoomSupplement) =>
+              onChange({
+                ...priceConfig,
+                singleRoomSupplement:
+                  singleRoomSupplement ?? priceConfig.singleRoomSupplement,
+              })
+            }
+          />
+        </RuleField>
+      </Col>
+
+      <Col xs={24} md={8}>
+        <RuleField label="大童价">
+          <InputNumber disabled value={priceConfig.adultPrice} addonBefore="¥" className="full-width" />
+        </RuleField>
+      </Col>
+      <Col xs={24} md={8}>
+        <RuleField label="中童价">
+          <InputNumber disabled value={priceConfig.adultPrice} addonBefore="¥" className="full-width" />
+        </RuleField>
+      </Col>
+      <Col xs={24} md={8}>
+        <RuleField label="幼童价">
+          <InputNumber disabled value={priceConfig.adultPrice} addonBefore="¥" className="full-width" />
+        </RuleField>
+      </Col>
+
+      {canConfigureGuarantee ? (
+        <Col xs={24} md={12}>
+          <RuleField label="保底金额">
+            <InputNumber
+              min={0}
+              addonBefore="¥"
+              value={priceConfig.guaranteeAmount ?? 0}
+              className="full-width"
+              onChange={(guaranteeAmount) =>
+                onChange({
+                  ...priceConfig,
+                  guaranteeAmount: guaranteeAmount ?? priceConfig.guaranteeAmount ?? 0,
+                })
+              }
+            />
+          </RuleField>
+        </Col>
+      ) : null}
+
+      <Col xs={24}>
+        <Text type="secondary">大童、中童、幼童价格第一版跟随成人价，暂不单独修改。</Text>
+      </Col>
+    </Row>
+  );
+}
+
+function FamilyPriceFields({
+  priceConfig,
+  onChange,
+}: {
+  priceConfig: Extract<PriceConfig, { priceType: "家庭" }>;
+  onChange: (priceConfig: PriceConfig) => void;
+}) {
+  const updateFamilyPrice = (
+    familyCode: string,
+    patch: Partial<Extract<PriceConfig, { priceType: "家庭" }>["familyPrices"][number]>,
+  ) => {
+    onChange({
+      ...priceConfig,
+      familyPrices: priceConfig.familyPrices.map((item) =>
+        item.familyCode === familyCode ? { ...item, ...patch } : item,
+      ),
+    });
+  };
+
+  const addFamilyPrice = () => {
+    const nextAdultCount = priceConfig.familyPrices.length + 1;
+    onChange({
+      ...priceConfig,
+      familyPrices: [
+        ...priceConfig.familyPrices,
+        {
+          familyCode: `${nextAdultCount}大1小`,
+          adultCount: nextAdultCount,
+          childCount: 1,
+          bigChildPrice: 0,
+          middleChildPrice: 0,
+          smallChildPrice: 0,
+        },
+      ],
+    });
+  };
+
+  const removeFamilyPrice = (familyCode: string) => {
+    onChange({
+      ...priceConfig,
+      familyPrices: priceConfig.familyPrices.filter((item) => item.familyCode !== familyCode),
+    });
+  };
+
+  return (
+    <Space direction="vertical" size={12} className="full-width">
+      <Row gutter={[12, 12]}>
+        <Col xs={24} md={12}>
+          <RuleField label="单间差">
+            <InputNumber
+              min={0}
+              addonBefore="¥"
+              value={priceConfig.singleRoomSupplement}
+              className="full-width"
+              onChange={(singleRoomSupplement) =>
+                onChange({
+                  ...priceConfig,
+                  singleRoomSupplement:
+                    singleRoomSupplement ?? priceConfig.singleRoomSupplement,
+                })
+              }
+            />
+          </RuleField>
+        </Col>
+      </Row>
+
+      <Table
+        rowKey="familyCode"
+        size="small"
+        pagination={false}
+        dataSource={priceConfig.familyPrices}
+        columns={[
+          {
+            title: "枚举价",
+            dataIndex: "familyCode",
+            width: 110,
+            render: (value: string) => <Tag>{value}</Tag>,
+          },
+          {
+            title: "1 大童价格",
+            dataIndex: "bigChildPrice",
+            render: (value: number, record) => (
+              <InputNumber
+                min={0}
+                addonBefore="¥"
+                value={value}
+                className="full-width"
+                onChange={(bigChildPrice) =>
+                  updateFamilyPrice(record.familyCode, {
+                    bigChildPrice: bigChildPrice ?? value,
+                  })
+                }
+              />
+            ),
+          },
+          {
+            title: "1 中童价格",
+            dataIndex: "middleChildPrice",
+            render: (value: number, record) => (
+              <InputNumber
+                min={0}
+                addonBefore="¥"
+                value={value}
+                className="full-width"
+                onChange={(middleChildPrice) =>
+                  updateFamilyPrice(record.familyCode, {
+                    middleChildPrice: middleChildPrice ?? value,
+                  })
+                }
+              />
+            ),
+          },
+          {
+            title: "1 幼童价格",
+            dataIndex: "smallChildPrice",
+            render: (value: number, record) => (
+              <InputNumber
+                min={0}
+                addonBefore="¥"
+                value={value}
+                className="full-width"
+                onChange={(smallChildPrice) =>
+                  updateFamilyPrice(record.familyCode, {
+                    smallChildPrice: smallChildPrice ?? value,
+                  })
+                }
+              />
+            ),
+          },
+          {
+            title: "操作",
+            width: 80,
+            render: (_, record) => (
+              <Button
+                size="small"
+                icon={<DeleteOutlined />}
+                disabled={priceConfig.familyPrices.length <= 1}
+                onClick={() => removeFamilyPrice(record.familyCode)}
+              />
+            ),
+          },
+        ]}
+      />
+
+      <Button icon={<PlusOutlined />} onClick={addFamilyPrice}>
+        添加家庭枚举价
+      </Button>
+    </Space>
+  );
+}
+
+function PackagePriceFields({
+  priceConfig,
+  onChange,
+}: {
+  priceConfig: Extract<PriceConfig, { priceType: "套" }>;
+  onChange: (priceConfig: PriceConfig) => void;
+}) {
+  return (
+    <Row gutter={[12, 12]}>
+      <Col xs={24} md={8}>
+        <RuleField label="每套人数">
+          <InputNumber
+            min={1}
+            value={priceConfig.packagePeople}
+            addonAfter="人"
+            className="full-width"
+            onChange={(packagePeople) =>
+              onChange({ ...priceConfig, packagePeople: packagePeople ?? priceConfig.packagePeople })
+            }
+          />
+        </RuleField>
+      </Col>
+      <Col xs={24} md={8}>
+        <RuleField label="成人数">
+          <InputNumber
+            min={1}
+            value={priceConfig.adultCount}
+            addonAfter="成人"
+            className="full-width"
+            onChange={(adultCount) =>
+              onChange({ ...priceConfig, adultCount: adultCount ?? priceConfig.adultCount })
+            }
+          />
+        </RuleField>
+      </Col>
+      <Col xs={24} md={8}>
+        <RuleField label="套价">
+          <InputNumber
+            min={0}
+            addonBefore="¥"
+            value={priceConfig.packagePrice}
+            className="full-width"
+            onChange={(packagePrice) =>
+              onChange({ ...priceConfig, packagePrice: packagePrice ?? priceConfig.packagePrice })
+            }
+          />
+        </RuleField>
+      </Col>
+    </Row>
   );
 }
 
@@ -790,4 +1176,87 @@ function formatPreferredWeekdays(preferredWeekdays: number[], fallbackWeekdays: 
   const fallbackLabel = fallbackWeekdays.length > 0 ? formatWeekdays(fallbackWeekdays) : "不配置";
 
   return `首选 ${preferredLabel} / 次选 ${fallbackLabel}`;
+}
+
+function formatChannels(channels: OpeningChannel[]) {
+  return channels.length > 0 ? channels.join("、") : "未配置";
+}
+
+function getAllowedPriceTypes(businessType: Product["businessType"]): PriceType[] {
+  if (businessType === "主题团") return ["人", "家庭"];
+  if (businessType === "目的地套餐") return ["套"];
+  return ["人"];
+}
+
+function buildDefaultPriceConfig(
+  priceType: PriceType,
+  businessType: Product["businessType"],
+  currentConfig: PriceConfig,
+): PriceConfig {
+  if (priceType === "家庭") {
+    return currentConfig.priceType === "家庭"
+      ? currentConfig
+      : {
+          priceType,
+          singleRoomSupplement:
+            currentConfig.priceType === "人" ? currentConfig.singleRoomSupplement : 0,
+          familyPrices: [
+            {
+              familyCode: "1大1小",
+              adultCount: 1,
+              childCount: 1,
+              bigChildPrice: 0,
+              middleChildPrice: 0,
+              smallChildPrice: 0,
+            },
+            {
+              familyCode: "2大1小",
+              adultCount: 2,
+              childCount: 1,
+              bigChildPrice: 0,
+              middleChildPrice: 0,
+              smallChildPrice: 0,
+            },
+          ],
+        };
+  }
+
+  if (priceType === "套") {
+    return currentConfig.priceType === "套"
+      ? currentConfig
+      : {
+          priceType,
+          packagePeople: 2,
+          adultCount: 2,
+          packagePrice: 0,
+        };
+  }
+
+  const shouldHaveGuarantee = businessType === "自由行" || businessType === "私享管家";
+
+  return currentConfig.priceType === "人"
+    ? currentConfig
+    : {
+        priceType,
+        adultPrice: 0,
+        singleRoomSupplement:
+          currentConfig.priceType === "家庭" ? currentConfig.singleRoomSupplement : 0,
+        childPriceFollowsAdult: true,
+        ...(shouldHaveGuarantee ? { guaranteeAmount: 0 } : {}),
+      };
+}
+
+function formatPriceConfig(priceConfig: PriceConfig | null) {
+  if (!priceConfig) return "未配置";
+
+  if (priceConfig.priceType === "人") {
+    const guarantee = priceConfig.guaranteeAmount ? ` / 保底 ¥${priceConfig.guaranteeAmount}` : "";
+    return `人 / 成人 ¥${priceConfig.adultPrice}${guarantee}`;
+  }
+
+  if (priceConfig.priceType === "家庭") {
+    return `家庭 / ${priceConfig.familyPrices.length} 组枚举价`;
+  }
+
+  return `套 / ${priceConfig.packagePeople} 人 ¥${priceConfig.packagePrice}`;
 }

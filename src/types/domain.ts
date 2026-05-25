@@ -4,6 +4,8 @@ export type RoomLevel = "基础" | "高级";
 export type FrequencyType = "weekly" | "intervalDays" | "daily";
 export type OpeningPlanStatus = "可开团" | "资源不足" | "规则冲突";
 export type OpeningExecutionStatus = "开团成功" | "开团失败";
+export type OpeningChannel = "WECHAT" | "CRS" | "小红书" | "招商银行";
+export type PriceType = "人" | "家庭" | "套";
 
 export interface AllowedDepartureRule {
   type: "none" | "oddDays" | "evenDays" | "weekdays";
@@ -48,11 +50,45 @@ export interface OpeningRuleOverride {
 export interface ProductOpeningConfig {
   productCode: string;
   itineraryCode?: string;
+  channels: OpeningChannel[];
   defaultGroupSize: number;
   defaultRoomCount: number;
+  priceConfig: PriceConfig;
   overrideRule?: OpeningRuleOverride;
   roomTypePreferences: ProductRoomTypePreference[];
 }
+
+export interface PerPersonPriceConfig {
+  priceType: "人";
+  adultPrice: number;
+  singleRoomSupplement: number;
+  childPriceFollowsAdult: true;
+  guaranteeAmount?: number;
+}
+
+export interface FamilyPriceItem {
+  familyCode: string;
+  adultCount: number;
+  childCount: number;
+  bigChildPrice: number;
+  middleChildPrice: number;
+  smallChildPrice: number;
+}
+
+export interface FamilyPriceConfig {
+  priceType: "家庭";
+  singleRoomSupplement: number;
+  familyPrices: FamilyPriceItem[];
+}
+
+export interface PackagePriceConfig {
+  priceType: "套";
+  packagePeople: number;
+  adultCount: number;
+  packagePrice: number;
+}
+
+export type PriceConfig = PerPersonPriceConfig | FamilyPriceConfig | PackagePriceConfig;
 
 export interface RoomType {
   roomTypeCode: string;
@@ -106,8 +142,10 @@ export interface StrategyConfig {
 export interface ResolvedOpeningConfig {
   productCode: string;
   itineraryCode?: string;
+  channels: OpeningChannel[];
   defaultGroupSize: number;
   defaultRoomCount: number;
+  priceConfig: PriceConfig;
   frequencyType: FrequencyType;
   weekdays?: number[];
   intervalDays?: number;
@@ -184,8 +222,10 @@ export interface OpeningPlan {
   itineraryName: string;
   businessType: BusinessType;
   departureDate: string;
+  channels: OpeningChannel[];
   groupSize: number;
   roomCount: number;
+  priceConfig: PriceConfig | null;
   status: OpeningPlanStatus;
   reason: string;
   resourceUsage: ResolvedResourceUsage[];
@@ -203,7 +243,9 @@ export interface OpeningPayload {
   itineraryCode: string;
   businessType: BusinessType;
   departureDate: string;
+  channels: OpeningChannel[];
   groupSize: number;
+  priceConfig: PriceConfig | null;
   resourceList: OpeningPayloadResource[];
 }
 
@@ -218,7 +260,9 @@ export interface OpeningExecutionRecord {
   itineraryName: string;
   businessType: BusinessType;
   departureDate: string;
+  channels: OpeningChannel[];
   groupSize: number;
+  priceConfig: PriceConfig | null;
   roomSummary: string;
   status: OpeningExecutionStatus;
   groupPeriodNo?: string;

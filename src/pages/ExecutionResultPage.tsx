@@ -104,6 +104,26 @@ export function ExecutionResultPage({
       ),
     },
     {
+      title: "渠道",
+      dataIndex: "channels",
+      width: 180,
+      render: (channels: OpeningExecutionRecord["channels"]) => (
+        <Space wrap size={[4, 4]}>
+          {channels.map((channel) => (
+            <Tag key={channel}>{channel}</Tag>
+          ))}
+        </Space>
+      ),
+    },
+    {
+      title: "价格配置",
+      dataIndex: "priceConfig",
+      width: 260,
+      render: (priceConfig: OpeningExecutionRecord["priceConfig"]) => (
+        <Text>{summarizeExecutionPriceConfig(priceConfig)}</Text>
+      ),
+    },
+    {
       title: "最大人数库存",
       dataIndex: "groupSize",
       width: 120,
@@ -180,7 +200,7 @@ export function ExecutionResultPage({
                 dataSource={batch.records}
                 columns={detailColumns}
                 pagination={false}
-                scroll={{ x: 1360 }}
+                scroll={{ x: 1620 }}
               />
             ),
           }}
@@ -188,6 +208,21 @@ export function ExecutionResultPage({
       </Card>
     </Space>
   );
+}
+
+function summarizeExecutionPriceConfig(priceConfig: OpeningExecutionRecord["priceConfig"]) {
+  if (!priceConfig) return "-";
+
+  if (priceConfig.priceType === "人") {
+    const guarantee = priceConfig.guaranteeAmount ? ` / 保底 ¥${priceConfig.guaranteeAmount}` : "";
+    return `人 / 成人 ¥${priceConfig.adultPrice} / 单间差 ¥${priceConfig.singleRoomSupplement}${guarantee}`;
+  }
+
+  if (priceConfig.priceType === "家庭") {
+    return `家庭 / ${priceConfig.familyPrices.length} 组枚举价 / 单间差 ¥${priceConfig.singleRoomSupplement}`;
+  }
+
+  return `套 / ${priceConfig.packagePeople} 人 / ¥${priceConfig.packagePrice}`;
 }
 
 function ExecutionStatusTag({ status }: { status: OpeningExecutionStatus }) {
