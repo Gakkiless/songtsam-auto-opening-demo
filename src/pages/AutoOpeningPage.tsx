@@ -39,7 +39,6 @@ import type {
   OpeningChannel,
   OpeningRuleOverride,
   PriceConfig,
-  PriceType,
   Product,
   ProductOpeningConfig,
   StrategyConfig,
@@ -76,12 +75,6 @@ const channelOptions: { label: OpeningChannel; value: OpeningChannel }[] = [
   { label: "CRS", value: "CRS" },
   { label: "小红书", value: "小红书" },
   { label: "招商银行", value: "招商银行" },
-];
-
-const priceTypeOptions: { label: PriceType; value: PriceType }[] = [
-  { label: "人", value: "人" },
-  { label: "家庭", value: "家庭" },
-  { label: "套", value: "套" },
 ];
 
 interface ProductOption {
@@ -745,25 +738,13 @@ function PriceConfigFields({
   priceConfig: PriceConfig;
   onChange: (priceConfig: PriceConfig) => void;
 }) {
-  const allowedPriceTypes = getAllowedPriceTypes(businessType);
-  const priceTypeSelectOptions = priceTypeOptions.filter((option) =>
-    allowedPriceTypes.includes(option.value),
-  );
-
   return (
     <Space direction="vertical" size={12} className="full-width price-config-block">
       <Row gutter={[12, 12]}>
         <Col xs={24} md={12}>
           <RuleField label="价格类型">
-            <Select
-              value={priceConfig.priceType}
-              options={priceTypeSelectOptions}
-              disabled={priceTypeSelectOptions.length === 1}
-              className="full-width"
-              onChange={(priceType) =>
-                onChange(buildDefaultPriceConfig(priceType, businessType, priceConfig))
-              }
-            />
+            <Tag color="blue">{priceConfig.priceType}</Tag>
+            <Text type="secondary">由产品行程接口返回，不在前端选择。</Text>
           </RuleField>
         </Col>
       </Row>
@@ -893,31 +874,6 @@ function FamilyPriceFields({
     });
   };
 
-  const addFamilyPrice = () => {
-    const nextAdultCount = priceConfig.familyPrices.length + 1;
-    onChange({
-      ...priceConfig,
-      familyPrices: [
-        ...priceConfig.familyPrices,
-        {
-          familyCode: `${nextAdultCount}大1小`,
-          adultCount: nextAdultCount,
-          childCount: 1,
-          bigChildPrice: 0,
-          middleChildPrice: 0,
-          smallChildPrice: 0,
-        },
-      ],
-    });
-  };
-
-  const removeFamilyPrice = (familyCode: string) => {
-    onChange({
-      ...priceConfig,
-      familyPrices: priceConfig.familyPrices.filter((item) => item.familyCode !== familyCode),
-    });
-  };
-
   return (
     <Space direction="vertical" size={12} className="full-width">
       <Row gutter={[12, 12]}>
@@ -1003,24 +959,12 @@ function FamilyPriceFields({
               />
             ),
           },
-          {
-            title: "操作",
-            width: 80,
-            render: (_, record) => (
-              <Button
-                size="small"
-                icon={<DeleteOutlined />}
-                disabled={priceConfig.familyPrices.length <= 1}
-                onClick={() => removeFamilyPrice(record.familyCode)}
-              />
-            ),
-          },
         ]}
       />
 
-      <Button icon={<PlusOutlined />} onClick={addFamilyPrice}>
-        添加家庭枚举价
-      </Button>
+      <Text type="secondary">
+        家庭枚举项由价格类型接口返回，当前只允许维护每组枚举价的金额。
+      </Text>
     </Space>
   );
 }
@@ -1180,70 +1124,6 @@ function formatPreferredWeekdays(preferredWeekdays: number[], fallbackWeekdays: 
 
 function formatChannels(channels: OpeningChannel[]) {
   return channels.length > 0 ? channels.join("、") : "未配置";
-}
-
-function getAllowedPriceTypes(businessType: Product["businessType"]): PriceType[] {
-  if (businessType === "主题团") return ["人", "家庭"];
-  if (businessType === "目的地套餐") return ["套"];
-  return ["人"];
-}
-
-function buildDefaultPriceConfig(
-  priceType: PriceType,
-  businessType: Product["businessType"],
-  currentConfig: PriceConfig,
-): PriceConfig {
-  if (priceType === "家庭") {
-    return currentConfig.priceType === "家庭"
-      ? currentConfig
-      : {
-          priceType,
-          singleRoomSupplement:
-            currentConfig.priceType === "人" ? currentConfig.singleRoomSupplement : 0,
-          familyPrices: [
-            {
-              familyCode: "1大1小",
-              adultCount: 1,
-              childCount: 1,
-              bigChildPrice: 0,
-              middleChildPrice: 0,
-              smallChildPrice: 0,
-            },
-            {
-              familyCode: "2大1小",
-              adultCount: 2,
-              childCount: 1,
-              bigChildPrice: 0,
-              middleChildPrice: 0,
-              smallChildPrice: 0,
-            },
-          ],
-        };
-  }
-
-  if (priceType === "套") {
-    return currentConfig.priceType === "套"
-      ? currentConfig
-      : {
-          priceType,
-          packagePeople: 2,
-          adultCount: 2,
-          packagePrice: 0,
-        };
-  }
-
-  const shouldHaveGuarantee = businessType === "自由行" || businessType === "私享管家";
-
-  return currentConfig.priceType === "人"
-    ? currentConfig
-    : {
-        priceType,
-        adultPrice: 0,
-        singleRoomSupplement:
-          currentConfig.priceType === "家庭" ? currentConfig.singleRoomSupplement : 0,
-        childPriceFollowsAdult: true,
-        ...(shouldHaveGuarantee ? { guaranteeAmount: 0 } : {}),
-      };
 }
 
 function formatPriceConfig(priceConfig: PriceConfig | null) {
