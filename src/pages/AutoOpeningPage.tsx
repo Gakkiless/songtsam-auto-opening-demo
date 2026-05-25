@@ -351,7 +351,11 @@ export function AutoOpeningPage({
                     </Space>
                   }
                 >
-                  <Descriptions column={{ xs: 1, md: 2 }} size="small" className="section-gap">
+                  <Descriptions
+                    column={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2, xxl: 2 }}
+                    size="small"
+                    className="section-gap"
+                  >
                     <Descriptions.Item label="产品">
                       {product.productCode} / {product.productName}
                     </Descriptions.Item>
