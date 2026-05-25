@@ -28,6 +28,9 @@ export interface Product {
   itineraryName: string;
   businessType: BusinessType;
   tripDays: number;
+  priceModel?: string;
+  priceModelDesc?: PriceType;
+  priceConfig?: PriceConfig;
   dailyItinerary: ProductItineraryDay[];
 }
 

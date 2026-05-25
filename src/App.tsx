@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ApartmentOutlined,
   CalendarOutlined,
@@ -9,13 +9,19 @@ import {
   TableOutlined,
 } from "@ant-design/icons";
 import { ConfigProvider, Layout, Segmented, Space, Tag, Typography, theme } from "antd";
+import { fetchProductItineraries } from "./api/productItineraryApi";
 import {
   hotels,
   inventory,
   productOpeningConfigs as initialProductOpeningConfigs,
-  products,
+  products as mockProducts,
   strategyConfig as initialStrategyConfig,
 } from "./config/data";
+import {
+  mergeHotelsForProducts,
+  mergeInventoryForHotels,
+  mergeOpeningConfigsForProducts,
+} from "./config/runtimeData";
 import { generateOpeningPayload, generateOpeningPlans } from "./engine/openingEngine";
 import { AutoOpeningPage } from "./pages/AutoOpeningPage";
 import { ExecutionResultPage } from "./pages/ExecutionResultPage";
@@ -62,21 +68,32 @@ function App() {
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
   const [executionHistory, setExecutionHistory] = useState<OpeningExecutionRecord[]>([]);
   const [latestBatchId, setLatestBatchId] = useState("");
+  const [availableProducts, setAvailableProducts] = useState<Product[]>(mockProducts);
+  const [productDataSource, setProductDataSource] = useState<"loading" | "api" | "mock">("loading");
   const [openingConfigs, setOpeningConfigs] = useState<ProductOpeningConfig[]>(() =>
     cloneValue(initialProductOpeningConfigs),
   );
 
-  const allProductOptions = useMemo(() => buildProductOptions(products), []);
+  const allProductOptions = useMemo(() => buildProductOptions(availableProducts), [availableProducts]);
 
   const draftItineraryOptions = useMemo(
-    () => products.filter((product) => product.productCode === draftProductCode),
-    [draftProductCode],
+    () => availableProducts.filter((product) => product.productCode === draftProductCode),
+    [availableProducts, draftProductCode],
   );
 
   const selectedProducts = useMemo(() => {
     const selectedKeySet = new Set(addedItineraryKeys);
-    return products.filter((product) => selectedKeySet.has(getProductItineraryKey(product)));
-  }, [addedItineraryKeys]);
+    return availableProducts.filter((product) => selectedKeySet.has(getProductItineraryKey(product)));
+  }, [availableProducts, addedItineraryKeys]);
+
+  const runtimeHotels = useMemo(
+    () => mergeHotelsForProducts(hotels, availableProducts),
+    [availableProducts],
+  );
+  const runtimeInventory = useMemo(
+    () => mergeInventoryForHotels(inventory, runtimeHotels),
+    [runtimeHotels],
+  );
 
   const generatedSummary = useMemo(() => {
     if (!result) return "未生成";
@@ -90,6 +107,55 @@ function App() {
     setSelectedPlanIds([]);
   };
 
+  useEffect(() => {
+    let ignore = false;
+
+    fetchProductItineraries()
+      .then((apiProducts) => {
+        if (ignore || apiProducts.length === 0) return;
+        setAvailableProducts(apiProducts);
+        setOpeningConfigs((currentConfigs) =>
+          mergeOpeningConfigsForProducts(
+            currentConfigs,
+            apiProducts,
+            initialStrategyConfig.businessTypeOpeningRules,
+          ),
+        );
+        setProductDataSource("api");
+      })
+      .catch((error) => {
+        console.warn("产品行程接口不可用，已回落到本地 mock 数据", error);
+        if (!ignore) {
+          setProductDataSource("mock");
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (availableProducts.length === 0) return;
+    const availableItineraryKeys = new Set(availableProducts.map(getProductItineraryKey));
+    const firstProduct = availableProducts[0];
+    const firstItineraryKey = getProductItineraryKey(firstProduct);
+
+    setDraftProductCode((currentProductCode) =>
+      availableProducts.some((product) => product.productCode === currentProductCode)
+        ? currentProductCode
+        : firstProduct.productCode,
+    );
+    setDraftItineraryKey((currentItineraryKey) =>
+      availableItineraryKeys.has(currentItineraryKey) ? currentItineraryKey : firstItineraryKey,
+    );
+    setAddedItineraryKeys((currentKeys) => {
+      const validKeys = currentKeys.filter((key) => availableItineraryKeys.has(key));
+      return validKeys.length > 0 ? validKeys : [firstItineraryKey];
+    });
+    resetGeneratedState();
+  }, [availableProducts]);
+
   const handleDateRangeChange = (nextStartDate: string, nextEndDate: string) => {
     setStartDate(nextStartDate);
     setEndDate(nextEndDate);
@@ -98,7 +164,7 @@ function App() {
   };
 
   const handleSelectDraftProduct = (productCode: string) => {
-    const nextItinerary = products.find((product) => product.productCode === productCode);
+    const nextItinerary = availableProducts.find((product) => product.productCode === productCode);
     setDraftProductCode(productCode);
     setDraftItineraryKey(nextItinerary ? getProductItineraryKey(nextItinerary) : "");
     setSelectionError("");
@@ -154,8 +220,8 @@ function App() {
     const nextResult = generateOpeningPlans({
       products: selectedProducts,
       productOpeningConfigs: openingConfigs,
-      hotels,
-      inventory,
+      hotels: runtimeHotels,
+      inventory: runtimeInventory,
       config: initialStrategyConfig,
       startDate,
       endDate,
@@ -263,7 +329,11 @@ function App() {
                 {generatedSummary}
               </Tag>
               <Tag icon={<ApartmentOutlined />} color="geekblue">
-                产品行程 Mock / 配置化开团规则
+                {productDataSource === "api"
+                  ? "产品行程接口 / 配置化开团规则"
+                  : productDataSource === "loading"
+                    ? "产品行程接口加载中"
+                    : "产品行程 Mock / 配置化开团规则"}
               </Tag>
             </Space>
           </div>
