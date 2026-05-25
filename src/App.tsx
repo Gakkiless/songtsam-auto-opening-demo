@@ -18,8 +18,6 @@ import {
   strategyConfig as initialStrategyConfig,
 } from "./config/data";
 import {
-  mergeHotelsForProducts,
-  mergeInventoryForHotels,
   mergeOpeningConfigsForProducts,
 } from "./config/runtimeData";
 import { generateOpeningPayload, generateOpeningPlans } from "./engine/openingEngine";
@@ -85,15 +83,6 @@ function App() {
     const selectedKeySet = new Set(addedItineraryKeys);
     return availableProducts.filter((product) => selectedKeySet.has(getProductItineraryKey(product)));
   }, [availableProducts, addedItineraryKeys]);
-
-  const runtimeHotels = useMemo(
-    () => mergeHotelsForProducts(hotels, availableProducts),
-    [availableProducts],
-  );
-  const runtimeInventory = useMemo(
-    () => mergeInventoryForHotels(inventory, runtimeHotels),
-    [runtimeHotels],
-  );
 
   const generatedSummary = useMemo(() => {
     if (!result) return "未生成";
@@ -220,8 +209,8 @@ function App() {
     const nextResult = generateOpeningPlans({
       products: selectedProducts,
       productOpeningConfigs: openingConfigs,
-      hotels: runtimeHotels,
-      inventory: runtimeInventory,
+      hotels,
+      inventory,
       config: initialStrategyConfig,
       startDate,
       endDate,
@@ -539,21 +528,28 @@ function summarizePriceConfig(priceConfig: OpeningExecutionRecord["priceConfig"]
   if (!priceConfig) return "";
 
   if (priceConfig.priceType === "人") {
-    const guarantee = priceConfig.guaranteeAmount ? `，保底${priceConfig.guaranteeAmount}` : "";
-    return `成人价${priceConfig.adultPrice}，单间差${priceConfig.singleRoomSupplement}${guarantee}`;
+    const guarantee =
+      priceConfig.guaranteeAmount !== undefined
+        ? `，保底${formatCsvAmount(priceConfig.guaranteeAmount)}`
+        : "";
+    return `成人价${formatCsvAmount(priceConfig.adultPrice)}，单间差${formatCsvAmount(priceConfig.singleRoomSupplement)}${guarantee}`;
   }
 
   if (priceConfig.priceType === "家庭") {
     const familyPrices = priceConfig.familyPrices
       .map(
         (item) =>
-          `${item.familyCode}:大童${item.bigChildPrice}/中童${item.middleChildPrice}/幼童${item.smallChildPrice}`,
+          `${item.familyCode}:大童${formatCsvAmount(item.bigChildPrice)}/中童${formatCsvAmount(item.middleChildPrice)}/幼童${formatCsvAmount(item.smallChildPrice)}`,
       )
       .join("；");
-    return `单间差${priceConfig.singleRoomSupplement}；${familyPrices}`;
+    return `单间差${formatCsvAmount(priceConfig.singleRoomSupplement)}；${familyPrices || "规格接口未返回"}`;
   }
 
-  return `${priceConfig.packagePeople}人套，${priceConfig.adultCount}成人价${priceConfig.packagePrice}`;
+  return `${formatCsvAmount(priceConfig.packagePeople)}人套，${formatCsvAmount(priceConfig.adultCount)}成人价${formatCsvAmount(priceConfig.packagePrice)}`;
+}
+
+function formatCsvAmount(value: number | null | undefined) {
+  return value === null || value === undefined ? "接口未返回" : String(value);
 }
 
 function escapeCsvValue(value: string) {

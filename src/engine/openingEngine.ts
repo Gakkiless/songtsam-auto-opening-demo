@@ -146,6 +146,7 @@ export function calculateItineraryResourceUsage(
     const date = addDays(departureDate, day.dayIndex - 1);
     requirements.push({
       productCode: product.productCode,
+      dayIndex: day.dayIndex,
       hotelCode: day.hotelCode,
       hotelName: day.hotelName,
       hotelShortName: day.hotelShortName,
@@ -441,7 +442,7 @@ export function generateOpeningPlans(params: {
 }
 
 export function getItineraryShortCode(product: Product): string {
-  return product.dailyItinerary.map((day) => day.hotelShortName).join("");
+  return product.dailyItinerary.map((day) => day.hotelShortName).filter(Boolean).join("");
 }
 
 export function resolveOpeningConfig(
@@ -531,10 +532,17 @@ function resolveResourceUsage(
 
   requirementsByBlock.forEach((blockRequirements) => {
     const firstRequirement = blockRequirements[0];
+    if (!firstRequirement.hotelCode) {
+      issues.push(`D${firstRequirement.dayIndex} 酒店接口未返回`);
+      return;
+    }
+
     const hotel = hotelsByCode.get(firstRequirement.hotelCode);
 
     if (!hotel) {
-      issues.push(`${firstRequirement.hotelName} 未配置酒店基础数据`);
+      issues.push(
+        `${firstRequirement.hotelName || firstRequirement.hotelCode} 酒店房型接口未返回`,
+      );
       return;
     }
 
@@ -556,6 +564,13 @@ function resolveResourceUsage(
         choice.roomType!.roomTypeCode,
       );
 
+      if (!inventorySnapshot) {
+        issues.push(
+          `${requirement.date} ${requirement.hotelName || requirement.hotelCode} ${choice.roomType!.roomTypeName} 库存接口未返回`,
+        );
+        return;
+      }
+
       resourceUsage.push({
         ...requirement,
         roomTypeCode: choice.roomType!.roomTypeCode,
@@ -563,7 +578,7 @@ function resolveResourceUsage(
         roomClass: choice.roomType!.roomClass,
         roomLevel: choice.roomType!.roomLevel,
         isAdvancedRoom: choice.roomType!.isAdvancedRoom,
-        publicPool: inventorySnapshot?.publicPool ?? 0,
+        publicPool: inventorySnapshot.publicPool,
       });
     });
   });

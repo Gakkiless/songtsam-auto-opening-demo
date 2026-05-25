@@ -130,6 +130,11 @@ select {
   margin-bottom: 12px;
 }
 
+.missing-value {
+  color: #cf1322;
+  font-weight: 600;
+}
+
 .payload-pre {
   margin-bottom: 0 !important;
 }

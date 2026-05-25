@@ -1,10 +1,7 @@
 import type {
   BusinessFrequencyRule,
-  Hotel,
-  InventoryItem,
   Product,
   ProductOpeningConfig,
-  RoomClass,
 } from "../types/domain";
 
 const defaultChannels: ProductOpeningConfig["channels"] = ["WECHAT", "CRS"];
@@ -26,62 +23,14 @@ export function mergeOpeningConfigsForProducts(
       ...(currentConfig ?? createDefaultOpeningConfig(product, businessRules)),
       productCode: product.productCode,
       itineraryCode: product.itineraryCode,
-      priceConfig: product.priceConfig ?? currentConfig?.priceConfig ?? createDefaultOpeningConfig(product, businessRules).priceConfig,
+      priceConfig:
+        product.priceConfig ??
+        currentConfig?.priceConfig ??
+        createDefaultOpeningConfig(product, businessRules).priceConfig,
     });
   });
 
   return [...nextConfigsByKey.values()];
-}
-
-export function mergeHotelsForProducts(baseHotels: Hotel[], products: Product[]): Hotel[] {
-  const hotelsByCode = new Map(baseHotels.map((hotel) => [hotel.hotelCode, hotel]));
-
-  products.flatMap((product) => product.dailyItinerary).forEach((day) => {
-    if (hotelsByCode.has(day.hotelCode)) return;
-
-    hotelsByCode.set(day.hotelCode, {
-      hotelCode: day.hotelCode,
-      hotelName: day.hotelName,
-      hotelShortName: day.hotelShortName,
-      roomTypes: [
-        createSyntheticRoomType(day.hotelCode, "大床"),
-        createSyntheticRoomType(day.hotelCode, "双床"),
-      ],
-    });
-  });
-
-  return [...hotelsByCode.values()];
-}
-
-export function mergeInventoryForHotels(baseInventory: InventoryItem[], hotels: Hotel[]): InventoryItem[] {
-  const inventoryByKey = new Map(
-    baseInventory.map((item) => [inventoryKey(item.hotelCode, item.date, item.roomTypeCode), item]),
-  );
-
-  hotels.forEach((hotel) => {
-    hotel.roomTypes.forEach((roomType) => {
-      const key = inventoryKey(hotel.hotelCode, "2026-06-01", roomType.roomTypeCode);
-      if (inventoryByKey.has(key)) return;
-
-      inventoryByKey.set(key, {
-        hotelCode: hotel.hotelCode,
-        hotelName: hotel.hotelName,
-        hotelShortName: hotel.hotelShortName,
-        roomTypeCode: roomType.roomTypeCode,
-        roomTypeName: roomType.roomTypeName,
-        publicPool: 30,
-        preReserved: 0,
-        preAllocated: 0,
-        preOccupied: 0,
-        actualOccupied: 0,
-        roomClass: roomType.roomClass,
-        date: "2026-06-01",
-        isAdvancedRoom: roomType.isAdvancedRoom,
-      });
-    });
-  });
-
-  return [...inventoryByKey.values()];
 }
 
 function createDefaultOpeningConfig(
@@ -99,8 +48,8 @@ function createDefaultOpeningConfig(
     defaultRoomCount: defaultScale.roomCount,
     priceConfig: product.priceConfig ?? {
       priceType: "人",
-      adultPrice: 0,
-      singleRoomSupplement: 0,
+      adultPrice: null,
+      singleRoomSupplement: null,
       childPriceFollowsAdult: true,
     },
     overrideRule: businessRule
@@ -124,20 +73,6 @@ function getDefaultScale(businessType: Product["businessType"]) {
   return { groupSize: 12, roomCount: 6 };
 }
 
-function createSyntheticRoomType(hotelCode: string, roomClass: RoomClass) {
-  return {
-    roomTypeCode: `${hotelCode}-B-${roomClass === "大床" ? "KING" : "TWIN"}`,
-    roomTypeName: `基础${roomClass}`,
-    roomClass,
-    roomLevel: "基础" as const,
-    isAdvancedRoom: false,
-  };
-}
-
 function openingConfigKey(productCode: string, itineraryCode?: string) {
   return `${productCode}|${itineraryCode ?? ""}`;
-}
-
-function inventoryKey(hotelCode: string, date: string, roomTypeCode: string) {
-  return `${hotelCode}|${date}|${roomTypeCode}`;
 }

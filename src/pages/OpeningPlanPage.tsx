@@ -75,9 +75,10 @@ export function OpeningPlanPage({
       title: "价格配置",
       dataIndex: "priceConfig",
       width: 250,
-      render: (priceConfig: OpeningPlan["priceConfig"]) => (
-        <Text>{summarizePlanPriceConfig(priceConfig)}</Text>
-      ),
+      render: (priceConfig: OpeningPlan["priceConfig"]) => {
+        const summary = summarizePlanPriceConfig(priceConfig);
+        return <Text className={summary.includes("接口未返回") ? "missing-value" : undefined}>{summary}</Text>;
+      },
     },
     {
       title: "状态",
@@ -140,15 +141,24 @@ function summarizePlanPriceConfig(priceConfig: OpeningPlan["priceConfig"]) {
   if (!priceConfig) return "-";
 
   if (priceConfig.priceType === "人") {
-    const guarantee = priceConfig.guaranteeAmount ? ` / 保底 ¥${priceConfig.guaranteeAmount}` : "";
-    return `人 / 成人 ¥${priceConfig.adultPrice} / 单间差 ¥${priceConfig.singleRoomSupplement}${guarantee}`;
+    const guarantee =
+      priceConfig.guaranteeAmount !== undefined
+        ? ` / 保底 ${formatPlanAmount(priceConfig.guaranteeAmount)}`
+        : "";
+    return `人 / 成人 ${formatPlanAmount(priceConfig.adultPrice)} / 单间差 ${formatPlanAmount(priceConfig.singleRoomSupplement)}${guarantee}`;
   }
 
   if (priceConfig.priceType === "家庭") {
-    return `家庭 / ${priceConfig.familyPrices.length} 组枚举价 / 单间差 ¥${priceConfig.singleRoomSupplement}`;
+    const specCount =
+      priceConfig.familyPrices.length > 0 ? `${priceConfig.familyPrices.length} 组规格` : "规格接口未返回";
+    return `家庭 / ${specCount} / 单间差 ${formatPlanAmount(priceConfig.singleRoomSupplement)}`;
   }
 
-  return `套 / ${priceConfig.packagePeople} 人 / ¥${priceConfig.packagePrice}`;
+  return `套 / ${priceConfig.packagePeople ?? "接口未返回"} 人 / ${formatPlanAmount(priceConfig.packagePrice)}`;
+}
+
+function formatPlanAmount(value: number | null | undefined) {
+  return value === null || value === undefined ? "接口未返回" : `¥${value}`;
 }
 
 function RoomTypeSummary({ plan }: { plan: OpeningPlan }) {

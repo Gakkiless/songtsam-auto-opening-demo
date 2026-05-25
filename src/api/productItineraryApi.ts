@@ -115,18 +115,24 @@ function normalizeProductItinerary(item: ProductItineraryApiItem): Product | nul
     itineraryCode,
     itineraryName: item.itineraryName?.trim() || itineraryCode,
     businessType: normalizeBusinessType(item.categorySubDesc),
-    tripDays: item.itineraryDays || dailyHotels.length || 1,
+    tripDays: item.itineraryDays || getMaxDay(dailyHotels, dailyActivities) || 0,
     priceModel: item.priceModel,
     priceModelDesc: priceType,
     priceConfig: buildPriceConfig(priceType, itinerarySpecs, item.categorySubDesc),
-    dailyItinerary: buildDailyItinerary(dailyHotels, dailyActivities),
+    dailyItinerary: buildDailyItinerary(
+      dailyHotels,
+      dailyActivities,
+      item.itineraryDays || getMaxDay(dailyHotels, dailyActivities),
+    ),
   };
 }
 
 function buildDailyItinerary(
   dailyHotels: ApiDailyHotel[],
   dailyActivities: ApiDailyActivity[],
+  tripDays: number,
 ): ProductItineraryDay[] {
+  const hotelsByDay = new Map(dailyHotels.map((day) => [day.day, day.hotels ?? []]));
   const activitiesByDay = new Map(
     dailyActivities.map((day) => [
       day.day,
@@ -136,21 +142,23 @@ function buildDailyItinerary(
         .join(" / "),
     ]),
   );
+  const maxDay = tripDays || getMaxDay(dailyHotels, dailyActivities);
 
-  return dailyHotels
-    .map((day) => {
-      const hotel = day.hotels?.find((candidate) => candidate.hotelCode && candidate.hotelName);
-      if (!hotel?.hotelCode || !hotel.hotelName) return null;
+  return Array.from({ length: maxDay }, (_, index) => {
+    const dayIndex = index + 1;
+    const hotel = hotelsByDay.get(dayIndex)?.find((candidate) => candidate.hotelCode && candidate.hotelName);
+    const activityName = activitiesByDay.get(dayIndex) || "";
 
-      return {
-        dayIndex: day.day,
-        hotelCode: hotel.hotelCode,
-        hotelName: hotel.hotelName,
-        hotelShortName: hotel.hotelShort || hotel.hotelName,
-        activityName: activitiesByDay.get(day.day) || "-",
-      };
-    })
-    .filter(Boolean) as ProductItineraryDay[];
+    return {
+      dayIndex,
+      hotelCode: hotel?.hotelCode?.trim() ?? "",
+      hotelName: hotel?.hotelName?.trim() ?? "",
+      hotelShortName: hotel?.hotelShort?.trim() ?? "",
+      activityName,
+      hotelMissing: !hotel?.hotelCode || !hotel.hotelName,
+      activityMissing: !activityName,
+    };
+  });
 }
 
 function buildPriceConfig(
@@ -159,21 +167,19 @@ function buildPriceConfig(
   businessTypeDesc?: string,
 ): PriceConfig {
   if (priceType === "家庭") {
-    const familySpecs = itinerarySpecs.length > 0 ? itinerarySpecs : [{ adult: 1, children: 1 }];
-
     return {
       priceType,
-      singleRoomSupplement: 0,
-      familyPrices: familySpecs.map((spec, index) => {
+      singleRoomSupplement: null,
+      familyPrices: itinerarySpecs.map((spec) => {
         const adultCount = spec.adult || 1;
         const childCount = spec.children ?? 1;
         return {
           familyCode: spec.itinerarySpecsDesc || `${adultCount}大${childCount}小`,
           adultCount,
           childCount,
-          bigChildPrice: 0,
-          middleChildPrice: 0,
-          smallChildPrice: 0,
+          bigChildPrice: null,
+          middleChildPrice: null,
+          smallChildPrice: null,
         };
       }),
     };
@@ -186,19 +192,27 @@ function buildPriceConfig(
 
     return {
       priceType,
-      packagePeople: adultCount + childCount,
-      adultCount,
-      packagePrice: 0,
+      packagePeople: firstSpec ? adultCount + childCount : null,
+      adultCount: firstSpec ? adultCount : null,
+      packagePrice: null,
     };
   }
 
   return {
     priceType: "人",
-    adultPrice: 0,
-    singleRoomSupplement: 0,
+    adultPrice: null,
+    singleRoomSupplement: null,
     childPriceFollowsAdult: true,
-    ...(isGuaranteeBusinessType(businessTypeDesc) ? { guaranteeAmount: 0 } : {}),
+    ...(isGuaranteeBusinessType(businessTypeDesc) ? { guaranteeAmount: null } : {}),
   };
+}
+
+function getMaxDay(dailyHotels: ApiDailyHotel[], dailyActivities: ApiDailyActivity[]): number {
+  return Math.max(
+    0,
+    ...dailyHotels.map((day) => day.day || 0),
+    ...dailyActivities.map((day) => day.day || 0),
+  );
 }
 
 function normalizeJsonArray<T>(value: T[] | undefined, jsonValue: string | null | undefined): T[] {

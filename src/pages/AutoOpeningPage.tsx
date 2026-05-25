@@ -36,6 +36,7 @@ import {
 import type {
   AllowedDepartureRule,
   GenerateOpeningResult,
+  InterfaceAmount,
   OpeningChannel,
   OpeningRuleOverride,
   PriceConfig,
@@ -364,7 +365,7 @@ export function AutoOpeningPage({
                     <Descriptions.Item label="行程名称">{product.itineraryName}</Descriptions.Item>
                     <Descriptions.Item label="行程天数">{formatTripDuration(product)}</Descriptions.Item>
                     <Descriptions.Item label="行程酒店">
-                      {getItineraryShortCode(product)}
+                      {getItineraryShortCode(product) || <MissingValue />}
                     </Descriptions.Item>
                   </Descriptions>
 
@@ -393,8 +394,14 @@ export function AutoOpeningPage({
                         dataIndex: "hotelName",
                         render: (_: string, record) => (
                           <Space direction="vertical" size={0}>
-                            <Text>{record.hotelName}</Text>
-                            <Text type="secondary">{record.hotelCode}</Text>
+                            {record.hotelMissing ? (
+                              <MissingValue />
+                            ) : (
+                              <>
+                                <Text>{record.hotelName}</Text>
+                                <Text type="secondary">{record.hotelCode}</Text>
+                              </>
+                            )}
                           </Space>
                         ),
                       },
@@ -402,10 +409,12 @@ export function AutoOpeningPage({
                         title: "简称",
                         dataIndex: "hotelShortName",
                         width: 70,
+                        render: (value: string) => value || <MissingValue />,
                       },
                       {
                         title: "每日活动",
                         dataIndex: "activityName",
+                        render: (value: string) => value || <MissingValue />,
                       },
                     ]}
                   />
@@ -475,7 +484,12 @@ function getProductItineraryKey(product: Product): string {
 }
 
 function formatTripDuration(product: Product): string {
-  return `${product.tripDays} 天 ${product.dailyItinerary.length} 晚`;
+  const returnedHotelNights = product.dailyItinerary.filter((day) => !day.hotelMissing).length;
+  return `${product.tripDays} 天 ${returnedHotelNights} 晚`;
+}
+
+function MissingValue() {
+  return <Text className="missing-value">接口未返回</Text>;
 }
 
 function getProductOpeningConfig(configs: ProductOpeningConfig[], product: Product) {
@@ -507,7 +521,9 @@ function OpeningConfigSummary({
         <Tag color="blue">最大人数 {resolvedOpeningConfig.defaultGroupSize}</Tag>
         <Tag color="blue">房间 {resolvedOpeningConfig.defaultRoomCount} 间</Tag>
         <Tag>渠道 {formatChannels(resolvedOpeningConfig.channels)}</Tag>
-        <Tag>价格 {formatPriceConfig(resolvedOpeningConfig.priceConfig)}</Tag>
+        <Tag color={priceConfigHasMissingValue(resolvedOpeningConfig.priceConfig) ? "red" : undefined}>
+          价格 {formatPriceConfig(resolvedOpeningConfig.priceConfig)}
+        </Tag>
         <Tag>{getFrequencyLabel(resolvedOpeningConfig)}</Tag>
         <Tag>{resolvedOpeningConfig.allowedDepartureRule.description}</Tag>
         <Tag>
@@ -792,12 +808,15 @@ function PerPersonPriceFields({
           <InputNumber
             min={0}
             addonBefore="¥"
-            value={priceConfig.adultPrice}
+            value={priceConfig.adultPrice ?? undefined}
+            status={isMissingAmount(priceConfig.adultPrice) ? "error" : undefined}
+            placeholder="接口未返回"
             className="full-width"
             onChange={(adultPrice) =>
-              onChange({ ...priceConfig, adultPrice: adultPrice ?? priceConfig.adultPrice })
+              onChange({ ...priceConfig, adultPrice })
             }
           />
+          {isMissingAmount(priceConfig.adultPrice) ? <MissingValue /> : null}
         </RuleField>
       </Col>
 
@@ -806,32 +825,55 @@ function PerPersonPriceFields({
           <InputNumber
             min={0}
             addonBefore="¥"
-            value={priceConfig.singleRoomSupplement}
+            value={priceConfig.singleRoomSupplement ?? undefined}
+            status={isMissingAmount(priceConfig.singleRoomSupplement) ? "error" : undefined}
+            placeholder="接口未返回"
             className="full-width"
             onChange={(singleRoomSupplement) =>
               onChange({
                 ...priceConfig,
-                singleRoomSupplement:
-                  singleRoomSupplement ?? priceConfig.singleRoomSupplement,
+                singleRoomSupplement,
               })
             }
           />
+          {isMissingAmount(priceConfig.singleRoomSupplement) ? <MissingValue /> : null}
         </RuleField>
       </Col>
 
       <Col xs={24} md={8}>
         <RuleField label="大童价">
-          <InputNumber disabled value={priceConfig.adultPrice} addonBefore="¥" className="full-width" />
+          <InputNumber
+            disabled
+            value={priceConfig.adultPrice ?? undefined}
+            addonBefore="¥"
+            className="full-width"
+            placeholder="接口未返回"
+          />
+          {isMissingAmount(priceConfig.adultPrice) ? <MissingValue /> : null}
         </RuleField>
       </Col>
       <Col xs={24} md={8}>
         <RuleField label="中童价">
-          <InputNumber disabled value={priceConfig.adultPrice} addonBefore="¥" className="full-width" />
+          <InputNumber
+            disabled
+            value={priceConfig.adultPrice ?? undefined}
+            addonBefore="¥"
+            className="full-width"
+            placeholder="接口未返回"
+          />
+          {isMissingAmount(priceConfig.adultPrice) ? <MissingValue /> : null}
         </RuleField>
       </Col>
       <Col xs={24} md={8}>
         <RuleField label="幼童价">
-          <InputNumber disabled value={priceConfig.adultPrice} addonBefore="¥" className="full-width" />
+          <InputNumber
+            disabled
+            value={priceConfig.adultPrice ?? undefined}
+            addonBefore="¥"
+            className="full-width"
+            placeholder="接口未返回"
+          />
+          {isMissingAmount(priceConfig.adultPrice) ? <MissingValue /> : null}
         </RuleField>
       </Col>
 
@@ -841,15 +883,18 @@ function PerPersonPriceFields({
             <InputNumber
               min={0}
               addonBefore="¥"
-              value={priceConfig.guaranteeAmount ?? 0}
+              value={priceConfig.guaranteeAmount ?? undefined}
+              status={isMissingAmount(priceConfig.guaranteeAmount) ? "error" : undefined}
+              placeholder="接口未返回"
               className="full-width"
               onChange={(guaranteeAmount) =>
                 onChange({
                   ...priceConfig,
-                  guaranteeAmount: guaranteeAmount ?? priceConfig.guaranteeAmount ?? 0,
+                  guaranteeAmount,
                 })
               }
             />
+            {isMissingAmount(priceConfig.guaranteeAmount) ? <MissingValue /> : null}
           </RuleField>
         </Col>
       ) : null}
@@ -912,16 +957,18 @@ function FamilyPriceFields({
             <InputNumber
               min={0}
               addonBefore="¥"
-              value={priceConfig.singleRoomSupplement}
+              value={priceConfig.singleRoomSupplement ?? undefined}
+              status={isMissingAmount(priceConfig.singleRoomSupplement) ? "error" : undefined}
+              placeholder="接口未返回"
               className="full-width"
               onChange={(singleRoomSupplement) =>
                 onChange({
                   ...priceConfig,
-                  singleRoomSupplement:
-                    singleRoomSupplement ?? priceConfig.singleRoomSupplement,
+                  singleRoomSupplement,
                 })
               }
             />
+            {isMissingAmount(priceConfig.singleRoomSupplement) ? <MissingValue /> : null}
           </RuleField>
         </Col>
       </Row>
@@ -947,11 +994,13 @@ function FamilyPriceFields({
               <InputNumber
                 min={0}
                 addonBefore="¥"
-                value={value}
+                value={value ?? undefined}
+                status={isMissingAmount(value) ? "error" : undefined}
+                placeholder="接口未返回"
                 className="full-width"
                 onChange={(price) =>
                   updateFamilyPrice(record.familyCode, {
-                    [record.priceField]: price ?? value,
+                    [record.priceField]: price,
                   })
                 }
               />
@@ -963,6 +1012,7 @@ function FamilyPriceFields({
       <Text type="secondary">
         家庭枚举项由价格类型接口返回，当前只允许维护每组枚举价的金额。
       </Text>
+      {familyPriceRows.length === 0 ? <MissingValue /> : null}
     </Space>
   );
 }
@@ -980,26 +1030,32 @@ function PackagePriceFields({
         <RuleField label="每套人数">
           <InputNumber
             min={1}
-            value={priceConfig.packagePeople}
+            value={priceConfig.packagePeople ?? undefined}
+            status={isMissingAmount(priceConfig.packagePeople) ? "error" : undefined}
+            placeholder="接口未返回"
             addonAfter="人"
             className="full-width"
             onChange={(packagePeople) =>
-              onChange({ ...priceConfig, packagePeople: packagePeople ?? priceConfig.packagePeople })
+              onChange({ ...priceConfig, packagePeople })
             }
           />
+          {isMissingAmount(priceConfig.packagePeople) ? <MissingValue /> : null}
         </RuleField>
       </Col>
       <Col xs={24} md={8}>
         <RuleField label="成人数">
           <InputNumber
             min={1}
-            value={priceConfig.adultCount}
+            value={priceConfig.adultCount ?? undefined}
+            status={isMissingAmount(priceConfig.adultCount) ? "error" : undefined}
+            placeholder="接口未返回"
             addonAfter="成人"
             className="full-width"
             onChange={(adultCount) =>
-              onChange({ ...priceConfig, adultCount: adultCount ?? priceConfig.adultCount })
+              onChange({ ...priceConfig, adultCount })
             }
           />
+          {isMissingAmount(priceConfig.adultCount) ? <MissingValue /> : null}
         </RuleField>
       </Col>
       <Col xs={24} md={8}>
@@ -1007,12 +1063,15 @@ function PackagePriceFields({
           <InputNumber
             min={0}
             addonBefore="¥"
-            value={priceConfig.packagePrice}
+            value={priceConfig.packagePrice ?? undefined}
+            status={isMissingAmount(priceConfig.packagePrice) ? "error" : undefined}
+            placeholder="接口未返回"
             className="full-width"
             onChange={(packagePrice) =>
-              onChange({ ...priceConfig, packagePrice: packagePrice ?? priceConfig.packagePrice })
+              onChange({ ...priceConfig, packagePrice })
             }
           />
+          {isMissingAmount(priceConfig.packagePrice) ? <MissingValue /> : null}
         </RuleField>
       </Col>
     </Row>
@@ -1128,17 +1187,59 @@ function formatFamilyChildSpec(adultCount: number, childLabel: "大童" | "中�
   return `${adultCount}成人1${childLabel}`;
 }
 
+function isMissingAmount(value: InterfaceAmount | undefined) {
+  return value === null || value === undefined;
+}
+
+function formatAmount(value: InterfaceAmount | undefined) {
+  return isMissingAmount(value) ? "接口未返回" : `¥${value}`;
+}
+
 function formatPriceConfig(priceConfig: PriceConfig | null) {
   if (!priceConfig) return "未配置";
 
   if (priceConfig.priceType === "人") {
-    const guarantee = priceConfig.guaranteeAmount ? ` / 保底 ¥${priceConfig.guaranteeAmount}` : "";
-    return `人 / 成人 ¥${priceConfig.adultPrice}${guarantee}`;
+    const guarantee =
+      priceConfig.guaranteeAmount !== undefined
+        ? ` / 保底 ${formatAmount(priceConfig.guaranteeAmount)}`
+        : "";
+    return `人 / 成人 ${formatAmount(priceConfig.adultPrice)}${guarantee}`;
   }
 
   if (priceConfig.priceType === "家庭") {
     return `家庭 / ${priceConfig.familyPrices.length} 组枚举价`;
   }
 
-  return `套 / ${priceConfig.packagePeople} 人 ¥${priceConfig.packagePrice}`;
+  return `套 / ${priceConfig.packagePeople ?? "接口未返回"} 人 ${formatAmount(priceConfig.packagePrice)}`;
+}
+
+function priceConfigHasMissingValue(priceConfig: PriceConfig | null) {
+  if (!priceConfig) return true;
+
+  if (priceConfig.priceType === "人") {
+    return (
+      isMissingAmount(priceConfig.adultPrice) ||
+      isMissingAmount(priceConfig.singleRoomSupplement) ||
+      (priceConfig.guaranteeAmount !== undefined && isMissingAmount(priceConfig.guaranteeAmount))
+    );
+  }
+
+  if (priceConfig.priceType === "家庭") {
+    return (
+      isMissingAmount(priceConfig.singleRoomSupplement) ||
+      priceConfig.familyPrices.length === 0 ||
+      priceConfig.familyPrices.some(
+        (price) =>
+          isMissingAmount(price.bigChildPrice) ||
+          isMissingAmount(price.middleChildPrice) ||
+          isMissingAmount(price.smallChildPrice),
+      )
+    );
+  }
+
+  return (
+    isMissingAmount(priceConfig.packagePeople) ||
+    isMissingAmount(priceConfig.adultCount) ||
+    isMissingAmount(priceConfig.packagePrice)
+  );
 }

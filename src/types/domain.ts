@@ -6,6 +6,7 @@ export type OpeningPlanStatus = "可开团" | "资源不足" | "规则冲突";
 export type OpeningExecutionStatus = "开团成功" | "开团失败";
 export type OpeningChannel = "WECHAT" | "CRS" | "小红书" | "招商银行";
 export type PriceType = "人" | "家庭" | "套";
+export type InterfaceAmount = number | null;
 
 export interface AllowedDepartureRule {
   type: "none" | "oddDays" | "evenDays" | "weekdays";
@@ -19,6 +20,8 @@ export interface ProductItineraryDay {
   hotelName: string;
   hotelShortName: string;
   activityName: string;
+  hotelMissing?: boolean;
+  activityMissing?: boolean;
 }
 
 export interface Product {
@@ -63,32 +66,32 @@ export interface ProductOpeningConfig {
 
 export interface PerPersonPriceConfig {
   priceType: "人";
-  adultPrice: number;
-  singleRoomSupplement: number;
+  adultPrice: InterfaceAmount;
+  singleRoomSupplement: InterfaceAmount;
   childPriceFollowsAdult: true;
-  guaranteeAmount?: number;
+  guaranteeAmount?: InterfaceAmount;
 }
 
 export interface FamilyPriceItem {
   familyCode: string;
   adultCount: number;
   childCount: number;
-  bigChildPrice: number;
-  middleChildPrice: number;
-  smallChildPrice: number;
+  bigChildPrice: InterfaceAmount;
+  middleChildPrice: InterfaceAmount;
+  smallChildPrice: InterfaceAmount;
 }
 
 export interface FamilyPriceConfig {
   priceType: "家庭";
-  singleRoomSupplement: number;
+  singleRoomSupplement: InterfaceAmount;
   familyPrices: FamilyPriceItem[];
 }
 
 export interface PackagePriceConfig {
   priceType: "套";
-  packagePeople: number;
-  adultCount: number;
-  packagePrice: number;
+  packagePeople: InterfaceAmount;
+  adultCount: InterfaceAmount;
+  packagePrice: InterfaceAmount;
 }
 
 export type PriceConfig = PerPersonPriceConfig | FamilyPriceConfig | PackagePriceConfig;
@@ -161,6 +164,7 @@ export interface ResolvedOpeningConfig {
 
 export interface ItineraryResourceRequirement {
   productCode: string;
+  dayIndex: number;
   hotelCode: string;
   hotelName: string;
   hotelShortName: string;
