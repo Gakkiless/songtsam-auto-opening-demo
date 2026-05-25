@@ -224,15 +224,15 @@ function summarizeExecutionPriceConfig(priceConfig: OpeningExecutionRecord["pric
 
   if (priceConfig.priceType === "家庭") {
     const specCount =
-      priceConfig.familyPrices.length > 0 ? `${priceConfig.familyPrices.length} 组规格` : "规格接口未返回";
+      priceConfig.familyPrices.length > 0 ? `${priceConfig.familyPrices.length} 组规格` : "规格待配置";
     return `家庭 / ${specCount} / 单间差 ${formatExecutionAmount(priceConfig.singleRoomSupplement)}`;
   }
 
-  return `套 / ${priceConfig.packagePeople ?? "接口未返回"} 人 / ${formatExecutionAmount(priceConfig.packagePrice)}`;
+  return `套 / ${priceConfig.packagePeople ?? "待填写"} 人 / ${formatExecutionAmount(priceConfig.packagePrice)}`;
 }
 
 function formatExecutionAmount(value: number | null | undefined) {
-  return value === null || value === undefined ? "接口未返回" : `¥${value}`;
+  return value === null || value === undefined ? "待填写" : `¥${value}`;
 }
 
 function ExecutionStatusTag({ status }: { status: OpeningExecutionStatus }) {

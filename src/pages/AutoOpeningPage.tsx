@@ -521,9 +521,7 @@ function OpeningConfigSummary({
         <Tag color="blue">最大人数 {resolvedOpeningConfig.defaultGroupSize}</Tag>
         <Tag color="blue">房间 {resolvedOpeningConfig.defaultRoomCount} 间</Tag>
         <Tag>渠道 {formatChannels(resolvedOpeningConfig.channels)}</Tag>
-        <Tag color={priceConfigHasMissingValue(resolvedOpeningConfig.priceConfig) ? "red" : undefined}>
-          价格 {formatPriceConfig(resolvedOpeningConfig.priceConfig)}
-        </Tag>
+        <Tag>价格 {formatPriceConfig(resolvedOpeningConfig.priceConfig)}</Tag>
         <Tag>{getFrequencyLabel(resolvedOpeningConfig)}</Tag>
         <Tag>{resolvedOpeningConfig.allowedDepartureRule.description}</Tag>
         <Tag>
@@ -809,14 +807,12 @@ function PerPersonPriceFields({
             min={0}
             addonBefore="¥"
             value={priceConfig.adultPrice ?? undefined}
-            status={isMissingAmount(priceConfig.adultPrice) ? "error" : undefined}
-            placeholder="接口未返回"
+            placeholder="请填写"
             className="full-width"
             onChange={(adultPrice) =>
               onChange({ ...priceConfig, adultPrice })
             }
           />
-          {isMissingAmount(priceConfig.adultPrice) ? <MissingValue /> : null}
         </RuleField>
       </Col>
 
@@ -826,8 +822,7 @@ function PerPersonPriceFields({
             min={0}
             addonBefore="¥"
             value={priceConfig.singleRoomSupplement ?? undefined}
-            status={isMissingAmount(priceConfig.singleRoomSupplement) ? "error" : undefined}
-            placeholder="接口未返回"
+            placeholder="请填写"
             className="full-width"
             onChange={(singleRoomSupplement) =>
               onChange({
@@ -836,7 +831,6 @@ function PerPersonPriceFields({
               })
             }
           />
-          {isMissingAmount(priceConfig.singleRoomSupplement) ? <MissingValue /> : null}
         </RuleField>
       </Col>
 
@@ -847,9 +841,8 @@ function PerPersonPriceFields({
             value={priceConfig.adultPrice ?? undefined}
             addonBefore="¥"
             className="full-width"
-            placeholder="接口未返回"
+            placeholder="同成人价"
           />
-          {isMissingAmount(priceConfig.adultPrice) ? <MissingValue /> : null}
         </RuleField>
       </Col>
       <Col xs={24} md={8}>
@@ -859,9 +852,8 @@ function PerPersonPriceFields({
             value={priceConfig.adultPrice ?? undefined}
             addonBefore="¥"
             className="full-width"
-            placeholder="接口未返回"
+            placeholder="同成人价"
           />
-          {isMissingAmount(priceConfig.adultPrice) ? <MissingValue /> : null}
         </RuleField>
       </Col>
       <Col xs={24} md={8}>
@@ -871,9 +863,8 @@ function PerPersonPriceFields({
             value={priceConfig.adultPrice ?? undefined}
             addonBefore="¥"
             className="full-width"
-            placeholder="接口未返回"
+            placeholder="同成人价"
           />
-          {isMissingAmount(priceConfig.adultPrice) ? <MissingValue /> : null}
         </RuleField>
       </Col>
 
@@ -884,8 +875,7 @@ function PerPersonPriceFields({
               min={0}
               addonBefore="¥"
               value={priceConfig.guaranteeAmount ?? undefined}
-              status={isMissingAmount(priceConfig.guaranteeAmount) ? "error" : undefined}
-              placeholder="接口未返回"
+              placeholder="请填写"
               className="full-width"
               onChange={(guaranteeAmount) =>
                 onChange({
@@ -894,7 +884,6 @@ function PerPersonPriceFields({
                 })
               }
             />
-            {isMissingAmount(priceConfig.guaranteeAmount) ? <MissingValue /> : null}
           </RuleField>
         </Col>
       ) : null}
@@ -958,8 +947,7 @@ function FamilyPriceFields({
               min={0}
               addonBefore="¥"
               value={priceConfig.singleRoomSupplement ?? undefined}
-              status={isMissingAmount(priceConfig.singleRoomSupplement) ? "error" : undefined}
-              placeholder="接口未返回"
+              placeholder="请填写"
               className="full-width"
               onChange={(singleRoomSupplement) =>
                 onChange({
@@ -968,7 +956,6 @@ function FamilyPriceFields({
                 })
               }
             />
-            {isMissingAmount(priceConfig.singleRoomSupplement) ? <MissingValue /> : null}
           </RuleField>
         </Col>
       </Row>
@@ -995,8 +982,7 @@ function FamilyPriceFields({
                 min={0}
                 addonBefore="¥"
                 value={value ?? undefined}
-                status={isMissingAmount(value) ? "error" : undefined}
-                placeholder="接口未返回"
+                placeholder="请填写"
                 className="full-width"
                 onChange={(price) =>
                   updateFamilyPrice(record.familyCode, {
@@ -1010,9 +996,8 @@ function FamilyPriceFields({
       />
 
       <Text type="secondary">
-        家庭枚举项由价格类型接口返回，当前只允许维护每组枚举价的金额。
+        家庭规格由系统按价格类型组合，运营填写每个规格的价格。
       </Text>
-      {familyPriceRows.length === 0 ? <MissingValue /> : null}
     </Space>
   );
 }
@@ -1031,15 +1016,13 @@ function PackagePriceFields({
           <InputNumber
             min={1}
             value={priceConfig.packagePeople ?? undefined}
-            status={isMissingAmount(priceConfig.packagePeople) ? "error" : undefined}
-            placeholder="接口未返回"
+            placeholder="请填写"
             addonAfter="人"
             className="full-width"
             onChange={(packagePeople) =>
               onChange({ ...priceConfig, packagePeople })
             }
           />
-          {isMissingAmount(priceConfig.packagePeople) ? <MissingValue /> : null}
         </RuleField>
       </Col>
       <Col xs={24} md={8}>
@@ -1047,15 +1030,13 @@ function PackagePriceFields({
           <InputNumber
             min={1}
             value={priceConfig.adultCount ?? undefined}
-            status={isMissingAmount(priceConfig.adultCount) ? "error" : undefined}
-            placeholder="接口未返回"
+            placeholder="请填写"
             addonAfter="成人"
             className="full-width"
             onChange={(adultCount) =>
               onChange({ ...priceConfig, adultCount })
             }
           />
-          {isMissingAmount(priceConfig.adultCount) ? <MissingValue /> : null}
         </RuleField>
       </Col>
       <Col xs={24} md={8}>
@@ -1064,14 +1045,12 @@ function PackagePriceFields({
             min={0}
             addonBefore="¥"
             value={priceConfig.packagePrice ?? undefined}
-            status={isMissingAmount(priceConfig.packagePrice) ? "error" : undefined}
-            placeholder="接口未返回"
+            placeholder="请填写"
             className="full-width"
             onChange={(packagePrice) =>
               onChange({ ...priceConfig, packagePrice })
             }
           />
-          {isMissingAmount(priceConfig.packagePrice) ? <MissingValue /> : null}
         </RuleField>
       </Col>
     </Row>
@@ -1192,7 +1171,7 @@ function isMissingAmount(value: InterfaceAmount | undefined) {
 }
 
 function formatAmount(value: InterfaceAmount | undefined) {
-  return isMissingAmount(value) ? "接口未返回" : `¥${value}`;
+  return isMissingAmount(value) ? "待填写" : `¥${value}`;
 }
 
 function formatPriceConfig(priceConfig: PriceConfig | null) {
@@ -1207,39 +1186,8 @@ function formatPriceConfig(priceConfig: PriceConfig | null) {
   }
 
   if (priceConfig.priceType === "家庭") {
-    return `家庭 / ${priceConfig.familyPrices.length} 组枚举价`;
+    return `家庭 / ${priceConfig.familyPrices.length} 组规格`;
   }
 
-  return `套 / ${priceConfig.packagePeople ?? "接口未返回"} 人 ${formatAmount(priceConfig.packagePrice)}`;
-}
-
-function priceConfigHasMissingValue(priceConfig: PriceConfig | null) {
-  if (!priceConfig) return true;
-
-  if (priceConfig.priceType === "人") {
-    return (
-      isMissingAmount(priceConfig.adultPrice) ||
-      isMissingAmount(priceConfig.singleRoomSupplement) ||
-      (priceConfig.guaranteeAmount !== undefined && isMissingAmount(priceConfig.guaranteeAmount))
-    );
-  }
-
-  if (priceConfig.priceType === "家庭") {
-    return (
-      isMissingAmount(priceConfig.singleRoomSupplement) ||
-      priceConfig.familyPrices.length === 0 ||
-      priceConfig.familyPrices.some(
-        (price) =>
-          isMissingAmount(price.bigChildPrice) ||
-          isMissingAmount(price.middleChildPrice) ||
-          isMissingAmount(price.smallChildPrice),
-      )
-    );
-  }
-
-  return (
-    isMissingAmount(priceConfig.packagePeople) ||
-    isMissingAmount(priceConfig.adultCount) ||
-    isMissingAmount(priceConfig.packagePrice)
-  );
+  return `套 / ${priceConfig.packagePeople ?? "待填写"} 人 ${formatAmount(priceConfig.packagePrice)}`;
 }

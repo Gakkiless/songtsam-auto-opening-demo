@@ -542,14 +542,14 @@ function summarizePriceConfig(priceConfig: OpeningExecutionRecord["priceConfig"]
           `${item.familyCode}:大童${formatCsvAmount(item.bigChildPrice)}/中童${formatCsvAmount(item.middleChildPrice)}/幼童${formatCsvAmount(item.smallChildPrice)}`,
       )
       .join("；");
-    return `单间差${formatCsvAmount(priceConfig.singleRoomSupplement)}；${familyPrices || "规格接口未返回"}`;
+    return `单间差${formatCsvAmount(priceConfig.singleRoomSupplement)}；${familyPrices || "规格待配置"}`;
   }
 
   return `${formatCsvAmount(priceConfig.packagePeople)}人套，${formatCsvAmount(priceConfig.adultCount)}成人价${formatCsvAmount(priceConfig.packagePrice)}`;
 }
 
 function formatCsvAmount(value: number | null | undefined) {
-  return value === null || value === undefined ? "接口未返回" : String(value);
+  return value === null || value === undefined ? "待填写" : String(value);
 }
 
 function escapeCsvValue(value: string) {

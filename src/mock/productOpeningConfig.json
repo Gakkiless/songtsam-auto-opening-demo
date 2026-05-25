@@ -44,8 +44,8 @@
     ],
     "priceConfig": {
       "priceType": "人",
-      "adultPrice": 16800,
-      "singleRoomSupplement": 4200,
+      "adultPrice": null,
+      "singleRoomSupplement": null,
       "childPriceFollowsAdult": true
     }
   },
@@ -84,23 +84,23 @@
     ],
     "priceConfig": {
       "priceType": "家庭",
-      "singleRoomSupplement": 2600,
+      "singleRoomSupplement": null,
       "familyPrices": [
         {
           "familyCode": "1大1小",
           "adultCount": 1,
           "childCount": 1,
-          "bigChildPrice": 12800,
-          "middleChildPrice": 11800,
-          "smallChildPrice": 10800
+          "bigChildPrice": null,
+          "middleChildPrice": null,
+          "smallChildPrice": null
         },
         {
           "familyCode": "2大1小",
           "adultCount": 2,
           "childCount": 1,
-          "bigChildPrice": 19800,
-          "middleChildPrice": 18800,
-          "smallChildPrice": 17800
+          "bigChildPrice": null,
+          "middleChildPrice": null,
+          "smallChildPrice": null
         }
       ]
     }
@@ -135,8 +135,8 @@
     ],
     "priceConfig": {
       "priceType": "人",
-      "adultPrice": 9800,
-      "singleRoomSupplement": 2400,
+      "adultPrice": null,
+      "singleRoomSupplement": null,
       "childPriceFollowsAdult": true
     }
   },
@@ -173,10 +173,10 @@
     ],
     "priceConfig": {
       "priceType": "人",
-      "adultPrice": 6200,
-      "singleRoomSupplement": 1600,
+      "adultPrice": null,
+      "singleRoomSupplement": null,
       "childPriceFollowsAdult": true,
-      "guaranteeAmount": 18000
+      "guaranteeAmount": null
     }
   },
   {
@@ -211,10 +211,10 @@
     ],
     "priceConfig": {
       "priceType": "人",
-      "adultPrice": 4800,
-      "singleRoomSupplement": 1200,
+      "adultPrice": null,
+      "singleRoomSupplement": null,
       "childPriceFollowsAdult": true,
-      "guaranteeAmount": 12000
+      "guaranteeAmount": null
     }
   },
   {
@@ -255,10 +255,10 @@
     ],
     "priceConfig": {
       "priceType": "人",
-      "adultPrice": 18800,
-      "singleRoomSupplement": 5200,
+      "adultPrice": null,
+      "singleRoomSupplement": null,
       "childPriceFollowsAdult": true,
-      "guaranteeAmount": 50000
+      "guaranteeAmount": null
     }
   },
   {
@@ -288,9 +288,9 @@
     ],
     "priceConfig": {
       "priceType": "套",
-      "packagePeople": 2,
-      "adultCount": 2,
-      "packagePrice": 8800
+      "packagePeople": null,
+      "adultCount": null,
+      "packagePrice": null
     }
   }
 ]

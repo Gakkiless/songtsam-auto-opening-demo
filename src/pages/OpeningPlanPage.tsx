@@ -150,15 +150,15 @@ function summarizePlanPriceConfig(priceConfig: OpeningPlan["priceConfig"]) {
 
   if (priceConfig.priceType === "家庭") {
     const specCount =
-      priceConfig.familyPrices.length > 0 ? `${priceConfig.familyPrices.length} 组规格` : "规格接口未返回";
+      priceConfig.familyPrices.length > 0 ? `${priceConfig.familyPrices.length} 组规格` : "规格待配置";
     return `家庭 / ${specCount} / 单间差 ${formatPlanAmount(priceConfig.singleRoomSupplement)}`;
   }
 
-  return `套 / ${priceConfig.packagePeople ?? "接口未返回"} 人 / ${formatPlanAmount(priceConfig.packagePrice)}`;
+  return `套 / ${priceConfig.packagePeople ?? "待填写"} 人 / ${formatPlanAmount(priceConfig.packagePrice)}`;
 }
 
 function formatPlanAmount(value: number | null | undefined) {
-  return value === null || value === undefined ? "接口未返回" : `¥${value}`;
+  return value === null || value === undefined ? "待填写" : `¥${value}`;
 }
 
 function RoomTypeSummary({ plan }: { plan: OpeningPlan }) {

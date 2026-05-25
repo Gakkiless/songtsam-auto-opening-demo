@@ -36,10 +36,8 @@ interface ProductItineraryApiItem {
   priceModelDesc?: string;
   dailyHotelsJson?: string | null;
   dailyActivitiesJson?: string | null;
-  itinerarySpecsJson?: string | null;
   dailyHotels?: ApiDailyHotel[];
   dailyActivities?: ApiDailyActivity[];
-  itinerarySpecs?: ApiItinerarySpec[];
 }
 
 interface ApiDailyHotel {
@@ -61,13 +59,6 @@ interface ApiDailyActivity {
 interface ApiActivity {
   title?: string;
   timeSlotDesc?: string;
-}
-
-interface ApiItinerarySpec {
-  adult?: number;
-  children?: number;
-  itinerarySpecs?: string;
-  itinerarySpecsDesc?: string;
 }
 
 export async function fetchProductItineraries(): Promise<Product[]> {
@@ -103,10 +94,6 @@ function normalizeProductItinerary(item: ProductItineraryApiItem): Product | nul
     item.dailyActivities,
     item.dailyActivitiesJson,
   );
-  const itinerarySpecs = normalizeJsonArray<ApiItinerarySpec>(
-    item.itinerarySpecs,
-    item.itinerarySpecsJson,
-  );
   const priceType = normalizePriceType(item.priceModel, item.priceModelDesc);
 
   return {
@@ -118,7 +105,7 @@ function normalizeProductItinerary(item: ProductItineraryApiItem): Product | nul
     tripDays: item.itineraryDays || getMaxDay(dailyHotels, dailyActivities) || 0,
     priceModel: item.priceModel,
     priceModelDesc: priceType,
-    priceConfig: buildPriceConfig(priceType, itinerarySpecs, item.categorySubDesc),
+    priceConfig: buildPriceConfig(priceType, item.categorySubDesc),
     dailyItinerary: buildDailyItinerary(
       dailyHotels,
       dailyActivities,
@@ -163,37 +150,28 @@ function buildDailyItinerary(
 
 function buildPriceConfig(
   priceType: PriceType,
-  itinerarySpecs: ApiItinerarySpec[],
   businessTypeDesc?: string,
 ): PriceConfig {
   if (priceType === "家庭") {
     return {
       priceType,
       singleRoomSupplement: null,
-      familyPrices: itinerarySpecs.map((spec) => {
-        const adultCount = spec.adult || 1;
-        const childCount = spec.children ?? 1;
-        return {
-          familyCode: spec.itinerarySpecsDesc || `${adultCount}大${childCount}小`,
-          adultCount,
-          childCount,
-          bigChildPrice: null,
-          middleChildPrice: null,
-          smallChildPrice: null,
-        };
-      }),
+      familyPrices: [1, 2].map((adultCount) => ({
+        familyCode: `${adultCount}大1小`,
+        adultCount,
+        childCount: 1,
+        bigChildPrice: null,
+        middleChildPrice: null,
+        smallChildPrice: null,
+      })),
     };
   }
 
   if (priceType === "套") {
-    const firstSpec = itinerarySpecs[0];
-    const adultCount = firstSpec?.adult || 2;
-    const childCount = firstSpec?.children || 0;
-
     return {
       priceType,
-      packagePeople: firstSpec ? adultCount + childCount : null,
-      adultCount: firstSpec ? adultCount : null,
+      packagePeople: null,
+      adultCount: null,
       packagePrice: null,
     };
   }
