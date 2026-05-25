@@ -862,6 +862,30 @@ function FamilyPriceFields({
   priceConfig: Extract<PriceConfig, { priceType: "家庭" }>;
   onChange: (priceConfig: PriceConfig) => void;
 }) {
+  const familyPriceRows = priceConfig.familyPrices.flatMap((item) => [
+    {
+      familyCode: item.familyCode,
+      adultCount: item.adultCount,
+      childLabel: "大童" as const,
+      priceField: "bigChildPrice" as const,
+      price: item.bigChildPrice,
+    },
+    {
+      familyCode: item.familyCode,
+      adultCount: item.adultCount,
+      childLabel: "中童" as const,
+      priceField: "middleChildPrice" as const,
+      price: item.middleChildPrice,
+    },
+    {
+      familyCode: item.familyCode,
+      adultCount: item.adultCount,
+      childLabel: "幼童" as const,
+      priceField: "smallChildPrice" as const,
+      price: item.smallChildPrice,
+    },
+  ]);
+
   const updateFamilyPrice = (
     familyCode: string,
     patch: Partial<Extract<PriceConfig, { priceType: "家庭" }>["familyPrices"][number]>,
@@ -897,63 +921,31 @@ function FamilyPriceFields({
       </Row>
 
       <Table
-        rowKey="familyCode"
+        rowKey={(record) => `${record.familyCode}-${record.childLabel}`}
         size="small"
         pagination={false}
-        dataSource={priceConfig.familyPrices}
+        dataSource={familyPriceRows}
         columns={[
           {
-            title: "枚举价",
-            dataIndex: "familyCode",
-            width: 110,
-            render: (value: string) => <Tag>{value}</Tag>,
-          },
-          {
-            title: "1 大童价格",
-            dataIndex: "bigChildPrice",
-            render: (value: number, record) => (
-              <InputNumber
-                min={0}
-                addonBefore="¥"
-                value={value}
-                className="full-width"
-                onChange={(bigChildPrice) =>
-                  updateFamilyPrice(record.familyCode, {
-                    bigChildPrice: bigChildPrice ?? value,
-                  })
-                }
-              />
+            title: "规格",
+            dataIndex: "adultCount",
+            width: 160,
+            render: (_: number, record) => (
+              <Tag>{formatFamilyChildSpec(record.adultCount, record.childLabel)}</Tag>
             ),
           },
           {
-            title: "1 中童价格",
-            dataIndex: "middleChildPrice",
+            title: "价格",
+            dataIndex: "price",
             render: (value: number, record) => (
               <InputNumber
                 min={0}
                 addonBefore="¥"
                 value={value}
                 className="full-width"
-                onChange={(middleChildPrice) =>
+                onChange={(price) =>
                   updateFamilyPrice(record.familyCode, {
-                    middleChildPrice: middleChildPrice ?? value,
-                  })
-                }
-              />
-            ),
-          },
-          {
-            title: "1 幼童价格",
-            dataIndex: "smallChildPrice",
-            render: (value: number, record) => (
-              <InputNumber
-                min={0}
-                addonBefore="¥"
-                value={value}
-                className="full-width"
-                onChange={(smallChildPrice) =>
-                  updateFamilyPrice(record.familyCode, {
-                    smallChildPrice: smallChildPrice ?? value,
+                    [record.priceField]: price ?? value,
                   })
                 }
               />
@@ -1124,6 +1116,10 @@ function formatPreferredWeekdays(preferredWeekdays: number[], fallbackWeekdays: 
 
 function formatChannels(channels: OpeningChannel[]) {
   return channels.length > 0 ? channels.join("、") : "未配置";
+}
+
+function formatFamilyChildSpec(adultCount: number, childLabel: "大童" | "中童" | "幼童") {
+  return `${adultCount}成人1${childLabel}`;
 }
 
 function formatPriceConfig(priceConfig: PriceConfig | null) {
