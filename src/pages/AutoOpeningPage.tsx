@@ -335,6 +335,10 @@ export function AutoOpeningPage({
                   title={
                     <Space wrap className="itinerary-card-title">
                       <span>{product.productName}</span>
+                      <Tag color="blue">{product.businessType}</Tag>
+                    </Space>
+                  }
+                  extra={
                       <Button
                         aria-label={`配置${product.itineraryName}开团规则`}
                         type="primary"
@@ -347,8 +351,6 @@ export function AutoOpeningPage({
                       >
                         开团配置
                       </Button>
-                      <Tag color="blue">{product.businessType}</Tag>
-                    </Space>
                   }
                 >
                   <Descriptions
