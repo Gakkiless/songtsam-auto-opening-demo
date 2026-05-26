@@ -552,8 +552,13 @@ function resolveResourceUsage(
 
     if (!hotel) {
       issues.push(
-        `${firstRequirement.hotelName || firstRequirement.hotelCode} 酒店房型接口未返回`,
+        `${firstRequirement.hotelName || firstRequirement.hotelCode} 酒店信息接口未返回`,
       );
+      return;
+    }
+
+    if (hotel.roomTypes.length === 0) {
+      issues.push(`${hotel.hotelName} 房型接口未返回`);
       return;
     }
 

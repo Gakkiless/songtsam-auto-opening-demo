@@ -9,6 +9,7 @@ import {
   TableOutlined,
 } from "@ant-design/icons";
 import { ConfigProvider, Layout, Segmented, Space, Tag, Typography, theme } from "antd";
+import { fetchHotels } from "./api/hotelApi";
 import { fetchProductItineraries } from "./api/productItineraryApi";
 import {
   hotels,
@@ -31,6 +32,7 @@ import { OpeningPlanPage } from "./pages/OpeningPlanPage";
 import { PayloadPage } from "./pages/PayloadPage";
 import type {
   GenerateOpeningResult,
+  Hotel,
   OpeningExecutionRecord,
   OpeningPlan,
   Product,
@@ -70,7 +72,10 @@ function App() {
   const [executionHistory, setExecutionHistory] = useState<OpeningExecutionRecord[]>([]);
   const [latestBatchId, setLatestBatchId] = useState("");
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
+  const [availableHotels, setAvailableHotels] = useState<Hotel[]>(hotels);
   const [productDataSource, setProductDataSource] =
+    useState<"loading" | "api" | "empty" | "error">("loading");
+  const [hotelDataSource, setHotelDataSource] =
     useState<"loading" | "api" | "empty" | "error">("loading");
   const [openingConfigs, setOpeningConfigs] = useState<ProductOpeningConfig[]>(() =>
     cloneValue(initialProductOpeningConfigs),
@@ -125,6 +130,28 @@ function App() {
         if (!ignore) {
           setAvailableProducts([]);
           setProductDataSource("error");
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    fetchHotels()
+      .then((apiHotels) => {
+        if (ignore) return;
+        setAvailableHotels(apiHotels);
+        setHotelDataSource(apiHotels.length > 0 ? "api" : "empty");
+      })
+      .catch((error) => {
+        console.warn("酒店信息接口不可用", error);
+        if (!ignore) {
+          setAvailableHotels([]);
+          setHotelDataSource("error");
         }
       });
 
@@ -218,7 +245,7 @@ function App() {
     const nextResult = generateOpeningPlans({
       products: selectedProducts,
       productOpeningConfigs: openingConfigs,
-      hotels,
+      hotels: availableHotels,
       inventory,
       config: initialStrategyConfig,
       startDate,
@@ -329,6 +356,9 @@ function App() {
               <Tag icon={<ApartmentOutlined />} color="geekblue">
                 {getDataSourceLabel(productDataSource)}
               </Tag>
+              <Tag icon={<ApartmentOutlined />} color="cyan">
+                {getHotelDataSourceLabel(hotelDataSource, availableHotels.length)}
+              </Tag>
             </Space>
           </div>
 
@@ -427,6 +457,16 @@ function getDataSourceLabel(dataSource: "loading" | "api" | "empty" | "error") {
   if (dataSource === "loading") return "产品行程接口加载中";
   if (dataSource === "empty") return "产品行程接口未返回数据 / 配置化开团规则";
   return "产品行程接口异常 / 配置化开团规则";
+}
+
+function getHotelDataSourceLabel(
+  dataSource: "loading" | "api" | "empty" | "error",
+  hotelCount: number,
+) {
+  if (dataSource === "api") return `酒店信息接口 / ${hotelCount} 家酒店`;
+  if (dataSource === "loading") return "酒店信息接口加载中";
+  if (dataSource === "empty") return "酒店信息接口未返回数据";
+  return "酒店信息接口异常";
 }
 
 function createExecutionBatchId() {

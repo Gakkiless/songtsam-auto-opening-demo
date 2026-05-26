@@ -59,6 +59,7 @@ src/
 ## 数据接口
 
 - `src/api/productItineraryApi.ts`：产品行程接口 adapter，将接口返回的 `travelType`、`itineraryCode`、`categorySubDesc`、`priceModel`、`itinerarySpecsJson`、`dailyHotelsJson`、`dailyActivitiesJson` 等字段归一化为 Demo 内部 `Product` 模型。
+- `src/api/hotelApi.ts`：酒店信息接口 adapter，将接口返回的 `hotelCode`、`hotelName`、`hotelShort`、`sta` 归一化为 Demo 内部 `Hotel` 模型；当前只接入营业中的自有酒店基础资料，房型仍等待库存/房型接口补齐。
 - `src/config/data.ts`：当前只保留系统默认策略配置；酒店、房型和库存数组为空，等待真实接口补齐。
 - 酒店资源占用表基于库存数据直接渲染；库存接口未接入时显示“酒店房型库存接口未返回数据”。
 
