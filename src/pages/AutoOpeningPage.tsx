@@ -769,20 +769,16 @@ function PriceConfigFields({
         </Col>
         <Col xs={24} md={12}>
           <RuleField label="规格">
-            {itinerarySpecs.length > 0 ? (
-              <Space wrap size={[6, 6]}>
-                {itinerarySpecs.map((spec) => (
-                  <Tag key={spec.specCode}>
-                    {spec.specName}
-                    {spec.adultCount || spec.childCount
-                      ? ` / ${spec.adultCount}成人${spec.childCount ? `${spec.childCount}儿童` : ""}`
-                      : ""}
-                  </Tag>
-                ))}
-              </Space>
-            ) : (
-              <MissingValue />
-            )}
+            <Space wrap size={[6, 6]}>
+              {itinerarySpecs.map((spec) => (
+                <Tag key={spec.specCode}>
+                  {spec.specName}
+                  {spec.adultCount || spec.childCount
+                    ? ` / ${spec.adultCount}成人${spec.childCount ? `${spec.childCount}儿童` : ""}`
+                    : ""}
+                </Tag>
+              ))}
+            </Space>
           </RuleField>
         </Col>
       </Row>
@@ -1039,7 +1035,6 @@ function FamilyPriceFields({
       <Text type="secondary">
         家庭规格来自产品行程接口 itinerarySpecsJson，运营填写每个规格的价格。
       </Text>
-      {familyPriceRows.length === 0 ? <MissingValue /> : null}
     </Space>
   );
 }

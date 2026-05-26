@@ -60,6 +60,8 @@ interface ApiDailyActivity {
 }
 
 interface ApiActivity {
+  activityCode?: string;
+  activityName?: string;
   title?: string;
   timeSlotDesc?: string;
 }
@@ -140,7 +142,7 @@ function buildDailyItinerary(
     dailyActivities.map((day) => [
       day.day,
       (day.activities ?? [])
-        .map((activity) => activity.title?.trim())
+        .map((activity) => activity.activityName?.trim() || activity.title?.trim())
         .filter(Boolean)
         .join(" / "),
     ]),
