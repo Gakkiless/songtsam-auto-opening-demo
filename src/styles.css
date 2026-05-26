@@ -135,6 +135,15 @@ select {
   font-weight: 600;
 }
 
+.inventory-total-row > td {
+  background: #fbfdff;
+  font-weight: 600;
+}
+
+.inventory-total-row:hover > td {
+  background: #f0f7ff !important;
+}
+
 .payload-pre {
   margin-bottom: 0 !important;
 }

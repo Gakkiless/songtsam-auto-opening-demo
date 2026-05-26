@@ -596,48 +596,62 @@ function buildInventoryRows(
       .filter((plan) => plan.status !== "规则冲突")
       .flatMap((plan) => plan.resourceUsage),
   );
+  const touchedHotelDates = new Set(
+    [...usageByKey.values()].map((usage) => inventoryHotelDateKey(usage.hotelCode, usage.date)),
+  );
+  const rowsByKey = new Map<string, InventoryViewRow>();
 
-  return [...usageByKey.values()]
-    .map((usage) => {
-      const inventorySnapshot = findInventorySnapshot(
-        inventory,
-        usage.hotelCode,
-        usage.date,
-        usage.roomTypeCode,
-      );
-      const publicPool = inventorySnapshot?.publicPool ?? usage.publicPool;
-      const usedRooms = getInventoryUsedRooms(inventorySnapshot);
-      const plannedRooms = usage.quantity;
-      const availableLimit = publicPool;
-      const occupancyRate = publicPool === 0 ? 0 : (usedRooms + plannedRooms) / publicPool;
+  inventory
+    .filter((item) => touchedHotelDates.has(inventoryHotelDateKey(item.hotelCode, item.date)))
+    .forEach((item) => {
+      const key = inventoryKey(item.hotelCode, item.date, item.roomTypeCode);
+      rowsByKey.set(key, buildInventoryViewRow(item, usageByKey.get(key)));
+    });
 
-      return {
-        date: usage.date,
-        hotelCode: usage.hotelCode,
-        hotelName: usage.hotelName,
-        hotelShortName: usage.hotelShortName,
-        roomTypeCode: usage.roomTypeCode,
-        roomTypeName: usage.roomTypeName,
-        roomClass: usage.roomClass,
-        isAdvancedRoom: usage.isAdvancedRoom,
-        publicPool,
-        preReserved: inventorySnapshot?.preReserved ?? 0,
-        preAllocated: inventorySnapshot?.preAllocated ?? 0,
-        preOccupied: inventorySnapshot?.preOccupied ?? 0,
-        actualOccupied: inventorySnapshot?.actualOccupied ?? 0,
-        usedRooms,
-        plannedRooms,
-        availableLimit,
-        occupancyRate,
-        overLimit: usedRooms + plannedRooms > availableLimit,
-      };
-    })
+  usageByKey.forEach((usage, key) => {
+    if (rowsByKey.has(key)) return;
+    rowsByKey.set(key, buildInventoryViewRow(undefined, usage));
+  });
+
+  return [...rowsByKey.values()]
     .sort((a, b) =>
       `${a.date}-${a.hotelName}-${a.roomTypeName}`.localeCompare(
         `${b.date}-${b.hotelName}-${b.roomTypeName}`,
         "zh-CN",
       ),
     );
+}
+
+function buildInventoryViewRow(
+  inventorySnapshot: InventoryItem | undefined,
+  usage: ResolvedResourceUsage | undefined,
+): InventoryViewRow {
+  const publicPool = inventorySnapshot?.publicPool ?? usage?.publicPool ?? 0;
+  const usedRooms = getInventoryUsedRooms(inventorySnapshot);
+  const plannedRooms = usage?.quantity ?? 0;
+  const availableLimit = publicPool;
+  const occupancyRate = publicPool === 0 ? 0 : (usedRooms + plannedRooms) / publicPool;
+
+  return {
+    date: inventorySnapshot?.date ?? usage?.date ?? "",
+    hotelCode: inventorySnapshot?.hotelCode ?? usage?.hotelCode ?? "",
+    hotelName: inventorySnapshot?.hotelName ?? usage?.hotelName ?? "",
+    hotelShortName: inventorySnapshot?.hotelShortName ?? usage?.hotelShortName ?? "",
+    roomTypeCode: inventorySnapshot?.roomTypeCode ?? usage?.roomTypeCode ?? "",
+    roomTypeName: inventorySnapshot?.roomTypeName ?? usage?.roomTypeName ?? "",
+    roomClass: inventorySnapshot?.roomClass ?? usage?.roomClass ?? "大床",
+    isAdvancedRoom: inventorySnapshot?.isAdvancedRoom ?? usage?.isAdvancedRoom ?? false,
+    publicPool,
+    preReserved: inventorySnapshot?.preReserved ?? 0,
+    preAllocated: inventorySnapshot?.preAllocated ?? 0,
+    preOccupied: inventorySnapshot?.preOccupied ?? 0,
+    actualOccupied: inventorySnapshot?.actualOccupied ?? 0,
+    usedRooms,
+    plannedRooms,
+    availableLimit,
+    occupancyRate,
+    overLimit: usedRooms + plannedRooms > availableLimit,
+  };
 }
 
 function createOpeningPlan(params: {
@@ -726,6 +740,10 @@ function isRoomLevelUsable(roomLevel: RoomLevel, config: StrategyConfig): boolea
 
 export function inventoryKey(hotelCode: string, date: string, roomTypeCode: string): string {
   return `${hotelCode}|${date}|${roomTypeCode}`;
+}
+
+function inventoryHotelDateKey(hotelCode: string, date: string): string {
+  return `${hotelCode}|${date}`;
 }
 
 export function addDays(date: string, days: number): string {
