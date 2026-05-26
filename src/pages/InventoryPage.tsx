@@ -14,6 +14,8 @@ interface InventoryDateMetric {
   preAllocated: number;
   preOccupied: number;
   actualOccupied: number;
+  offlineOccupied: number;
+  maintenance: number;
   plannedRooms: number;
   availableLimit: number;
   occupancyRate: number;
@@ -48,6 +50,8 @@ const metricColumns: Array<{
   { key: "preAllocated", title: "预分配", width: 82 },
   { key: "preOccupied", title: "预占", width: 72 },
   { key: "actualOccupied", title: "实占", width: 72 },
+  { key: "offlineOccupied", title: "线下占用", width: 96 },
+  { key: "maintenance", title: "维修", width: 72 },
   {
     key: "plannedRooms",
     title: "本次计划",
@@ -159,7 +163,7 @@ export function InventoryPage({ rows }: { rows: InventoryViewRow[] }) {
         }}
         pagination={{ pageSize: 20, showSizeChanger: false }}
         rowClassName={(row) => (row.rowType === "hotelTotal" ? "inventory-total-row" : "")}
-        scroll={{ x: 500 + dates.length * 808 }}
+        scroll={{ x: 500 + dates.length * 976 }}
       />
     </Card>
   );
@@ -243,21 +247,33 @@ function summarizeDateMetrics(rows: InventoryViewRow[]): InventoryDateMetric {
   const preAllocated = sumBy(rows, (row) => row.preAllocated);
   const preOccupied = sumBy(rows, (row) => row.preOccupied);
   const actualOccupied = sumBy(rows, (row) => row.actualOccupied);
+  const offlineOccupied = sumBy(rows, (row) => row.offlineOccupied);
+  const maintenance = sumBy(rows, (row) => row.maintenance);
   const plannedRooms = sumBy(rows, (row) => row.plannedRooms);
   const availableLimit = sumBy(rows, (row) => row.availableLimit);
-  const occupiedRooms = preReserved + preAllocated + preOccupied + actualOccupied + plannedRooms;
+  const occupiedRooms =
+    preReserved +
+    preAllocated +
+    preOccupied +
+    actualOccupied +
+    offlineOccupied +
+    maintenance +
+    plannedRooms;
+  const totalRooms = sumBy(rows, (row) => row.totalRooms);
 
   return {
-    totalRooms: publicPool + preReserved + preAllocated + preOccupied + actualOccupied,
+    totalRooms,
     publicPool,
     preReserved,
     preAllocated,
     preOccupied,
     actualOccupied,
+    offlineOccupied,
+    maintenance,
     plannedRooms,
     availableLimit,
-    occupancyRate: availableLimit === 0 ? 0 : occupiedRooms / availableLimit,
-    overLimit: rows.some((row) => row.overLimit) || occupiedRooms > availableLimit,
+    occupancyRate: totalRooms === 0 ? 0 : occupiedRooms / totalRooms,
+    overLimit: rows.some((row) => row.overLimit),
   };
 }
 

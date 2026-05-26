@@ -10,6 +10,7 @@ import type {
   LockedInventory,
   OpeningPayload,
   OpeningPlan,
+  PriceConfig,
   Product,
   ProductOpeningConfig,
   ProductRoomTypePreference,
@@ -247,7 +248,7 @@ export function checkInventoryAvailability(
     const availableLimit = publicPool;
     const requestedRooms = usage.quantity;
 
-    if (usedRooms + lockedRooms + requestedRooms > availableLimit) {
+    if (lockedRooms + requestedRooms > availableLimit) {
       issues.push({
         hotelCode: usage.hotelCode,
         hotelName: usage.hotelName,
@@ -259,7 +260,7 @@ export function checkInventoryAvailability(
         usedRooms,
         lockedRooms,
         availableLimit,
-        reason: `${usage.date} ${usage.hotelName} ${usage.roomTypeName} 需 ${requestedRooms} 间，库存占用 ${usedRooms} 间，本轮已锁 ${lockedRooms} 间，公共池可用 ${availableLimit} 间；高级房型会触发团期涨价，基本盘第一版不自动切换`,
+        reason: `${usage.date} ${usage.hotelName} ${usage.roomTypeName} 需 ${requestedRooms} 间，本轮已锁 ${lockedRooms} 间，公共池可用 ${availableLimit} 间；高级房型会触发团期涨价，基本盘第一版不自动切换`,
       });
     }
   });
@@ -370,6 +371,22 @@ export function generateOpeningPlans(params: {
             planSequence: planSequence++,
             status: "规则冲突",
             reason: ruleCheck.reason,
+            resourceUsage: [],
+          }),
+        );
+        return;
+      }
+
+      const priceCheck = checkPriceConfigComplete(openingConfig.priceConfig);
+      if (!priceCheck.allowed) {
+        openingPlans.push(
+          createOpeningPlan({
+            product,
+            openingConfig,
+            departureDate,
+            planSequence: planSequence++,
+            status: "规则冲突",
+            reason: priceCheck.reason,
             resourceUsage: [],
           }),
         );
@@ -648,7 +665,8 @@ function buildInventoryViewRow(
   const usedRooms = getInventoryUsedRooms(inventorySnapshot);
   const plannedRooms = usage?.quantity ?? 0;
   const availableLimit = publicPool;
-  const occupancyRate = publicPool === 0 ? 0 : (usedRooms + plannedRooms) / publicPool;
+  const totalRooms = inventorySnapshot?.totalRooms ?? publicPool;
+  const occupancyRate = totalRooms === 0 ? 0 : (usedRooms + plannedRooms) / totalRooms;
 
   return {
     date: inventorySnapshot?.date ?? usage?.date ?? "",
@@ -659,16 +677,19 @@ function buildInventoryViewRow(
     roomTypeName: inventorySnapshot?.roomTypeName ?? usage?.roomTypeName ?? "",
     roomClass: inventorySnapshot?.roomClass ?? usage?.roomClass ?? "大床",
     isAdvancedRoom: inventorySnapshot?.isAdvancedRoom ?? usage?.isAdvancedRoom ?? false,
+    totalRooms,
     publicPool,
     preReserved: inventorySnapshot?.preReserved ?? 0,
     preAllocated: inventorySnapshot?.preAllocated ?? 0,
     preOccupied: inventorySnapshot?.preOccupied ?? 0,
     actualOccupied: inventorySnapshot?.actualOccupied ?? 0,
+    offlineOccupied: inventorySnapshot?.offlineOccupied ?? 0,
+    maintenance: inventorySnapshot?.maintenance ?? 0,
     usedRooms,
     plannedRooms,
     availableLimit,
     occupancyRate,
-    overLimit: usedRooms + plannedRooms > availableLimit,
+    overLimit: plannedRooms > availableLimit,
   };
 }
 
@@ -711,6 +732,51 @@ function summarizeAvailabilityIssues(issues: AvailabilityIssue[]): string {
     : visibleIssues.join("；");
 }
 
+function checkPriceConfigComplete(priceConfig: PriceConfig | null): RuleCheckResult {
+  if (!priceConfig) return { allowed: false, reason: "价格配置未填写，不能开团" };
+
+  if (priceConfig.priceType === "人") {
+    const missingFields = [
+      priceConfig.adultPrice === null ? "成人价" : "",
+      priceConfig.singleRoomSupplement === null ? "单间差" : "",
+      priceConfig.guaranteeAmount === null ? "保底金额" : "",
+    ].filter(Boolean);
+
+    return missingFields.length === 0
+      ? { allowed: true, reason: "价格配置完整" }
+      : { allowed: false, reason: `价格配置未填写完整：${missingFields.join("、")}` };
+  }
+
+  if (priceConfig.priceType === "家庭") {
+    const missingFields = [
+      priceConfig.singleRoomSupplement === null ? "单间差" : "",
+      priceConfig.familyPrices.length === 0 ? "规格价格" : "",
+      priceConfig.familyPrices.some(
+        (item) =>
+          item.bigChildPrice === null ||
+          item.middleChildPrice === null ||
+          item.smallChildPrice === null,
+      )
+        ? "规格金额"
+        : "",
+    ].filter(Boolean);
+
+    return missingFields.length === 0
+      ? { allowed: true, reason: "价格配置完整" }
+      : { allowed: false, reason: `价格配置未填写完整：${missingFields.join("、")}` };
+  }
+
+  const missingFields = [
+    priceConfig.packagePeople === null ? "套内人数" : "",
+    priceConfig.adultCount === null ? "成人数" : "",
+    priceConfig.packagePrice === null ? "套价" : "",
+  ].filter(Boolean);
+
+  return missingFields.length === 0
+    ? { allowed: true, reason: "价格配置完整" }
+    : { allowed: false, reason: `价格配置未填写完整：${missingFields.join("、")}` };
+}
+
 function aggregateUsageByKey(resourceUsage: ResolvedResourceUsage[]): Map<string, ResolvedResourceUsage> {
   const usageByKey = new Map<string, ResolvedResourceUsage>();
 
@@ -747,7 +813,9 @@ function getInventoryUsedRooms(inventoryItem?: InventoryItem): number {
     inventoryItem.preReserved +
     inventoryItem.preAllocated +
     inventoryItem.preOccupied +
-    inventoryItem.actualOccupied
+    inventoryItem.actualOccupied +
+    inventoryItem.offlineOccupied +
+    inventoryItem.maintenance
   );
 }
 

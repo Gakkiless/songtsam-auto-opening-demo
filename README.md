@@ -21,7 +21,7 @@ npm run dev
 6. 系统读取产品行程级开团配置。
 7. 系统按日期区间生成候选出发日。
 8. 系统按每日行程酒店简称计算入住块，例如 `香梅梅拉奔` 表示香格里拉 1 晚、梅里连住 2 晚、拉萨连住 2 晚、奔子栏 1 晚。
-9. 系统选择基础房型并检查公共池库存是否满足占用。
+9. 系统选择基础房型并检查公共池库存是否满足占用；如果开团价格未填写完整，则标记为规则冲突，不允许开团。
 10. 页面输出待确认计划、酒店资源占用和 mock payload；酒店资源占用表可直接展示库存接口数据，不依赖先生成开团计划。
 11. 产品运营勾选可开团计划，点击确认后执行 mock 开团接口。
 12. 系统展示本次执行结果：开团成功、开团失败、失败原因和成功团期号，并沉淀到历史开团记录。
@@ -60,9 +60,10 @@ src/
 ## 数据接口
 
 - `src/api/productItineraryApi.ts`：产品行程接口 adapter，将接口返回的 `travelType`、`itineraryCode`、`categorySubDesc`、`priceModel`、`itinerarySpecsJson`、`dailyHotelsJson`、`dailyActivitiesJson` 等字段归一化为 Demo 内部 `Product` 模型。
-- `src/api/hotelApi.ts`：酒店信息接口 adapter，将接口返回的 `hotelCode`、`hotelName`、`hotelShort`、`sta` 归一化为 Demo 内部 `Hotel` 模型；当前只接入营业中的自有酒店基础资料，房型仍等待库存/房型接口补齐。
+- `src/api/hotelApi.ts`：酒店信息接口 adapter，将接口返回的 `hotelCode`、`hotelName`、`hotelShort`、`sta` 归一化为 Demo 内部 `Hotel` 模型。
+- `src/api/inventoryApi.ts`：酒店房型库存接口 adapter，按当前开团日期区间和酒店信息接口返回的酒店编码查询 `/tool-api/inventory-board/query`，将 `rmtype`、`rmtypeName`、`publicPoolNum`、`blockAvailNum`、`preAllocationNum`、`preOccupiedNum`、`realOccupiedNum`、`pmsTotalNum`、`oooNum` 等字段归一化为 Demo 内部库存模型，并从库存行反推酒店房型。
 - `src/config/data.ts`：当前只保留系统默认策略配置；酒店、房型和库存数组为空，等待真实接口补齐。
-- 酒店资源占用表基于库存数据直接渲染；库存接口未接入时显示“酒店房型库存接口未返回数据”。
+- 酒店资源占用表基于库存接口数据直接渲染，不依赖先生成开团计划；生成计划后会叠加展示“本次计划占用”。
 
 ## 可配置项
 

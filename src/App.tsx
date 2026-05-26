@@ -10,10 +10,14 @@ import {
 } from "@ant-design/icons";
 import { ConfigProvider, Layout, Segmented, Space, Tag, Typography, theme } from "antd";
 import { fetchHotels } from "./api/hotelApi";
+import {
+  fetchInventoryBoard,
+  mergeInventoryRoomTypesIntoHotels,
+} from "./api/inventoryApi";
 import { fetchProductItineraries } from "./api/productItineraryApi";
 import {
   hotels,
-  inventory,
+  inventory as initialInventory,
   productOpeningConfigs as initialProductOpeningConfigs,
   strategyConfig as initialStrategyConfig,
 } from "./config/data";
@@ -79,9 +83,12 @@ function App() {
   const [historicalSuccessRate, setHistoricalSuccessRate] = useState<number | null>(null);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [availableHotels, setAvailableHotels] = useState<Hotel[]>(hotels);
+  const [availableInventory, setAvailableInventory] = useState(initialInventory);
   const [productDataSource, setProductDataSource] =
     useState<"loading" | "api" | "empty" | "error">("loading");
   const [hotelDataSource, setHotelDataSource] =
+    useState<"loading" | "api" | "empty" | "error">("loading");
+  const [inventoryDataSource, setInventoryDataSource] =
     useState<"loading" | "api" | "empty" | "error">("loading");
   const [openingConfigs, setOpeningConfigs] = useState<ProductOpeningConfig[]>(() =>
     cloneValue(initialProductOpeningConfigs),
@@ -106,8 +113,12 @@ function App() {
     return `${openable} 待确认 / ${blocked} 需处理`;
   }, [result]);
   const inventoryRows = useMemo(
-    () => result?.inventoryRows ?? buildInventoryRowsFromInventory(inventory),
-    [result],
+    () => result?.inventoryRows ?? buildInventoryRowsFromInventory(availableInventory),
+    [availableInventory, result],
+  );
+  const hotelsForPlanning = useMemo(
+    () => mergeInventoryRoomTypesIntoHotels(availableHotels, availableInventory),
+    [availableHotels, availableInventory],
   );
 
   const resetGeneratedState = () => {
@@ -165,6 +176,43 @@ function App() {
       ignore = true;
     };
   }, []);
+
+  useEffect(() => {
+    const hotelCodes = availableHotels.map((hotel) => hotel.hotelCode).filter(Boolean);
+
+    if (hotelCodes.length === 0 || !startDate || !endDate) {
+      setAvailableInventory([]);
+      setInventoryDataSource(hotelDataSource === "loading" ? "loading" : "empty");
+      return;
+    }
+
+    let ignore = false;
+    setInventoryDataSource("loading");
+
+    fetchInventoryBoard({
+      hotelCodes,
+      beginDate: startDate,
+      endDate,
+    })
+      .then((apiInventory) => {
+        if (ignore) return;
+        setAvailableInventory(apiInventory);
+        setInventoryDataSource(apiInventory.length > 0 ? "api" : "empty");
+        resetGeneratedState();
+      })
+      .catch((error) => {
+        console.warn("酒店房型库存接口不可用", error);
+        if (!ignore) {
+          setAvailableInventory([]);
+          setInventoryDataSource("error");
+          resetGeneratedState();
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [availableHotels, endDate, hotelDataSource, startDate]);
 
   useEffect(() => {
     if (availableProducts.length === 0) return;
@@ -247,12 +295,24 @@ function App() {
       return;
     }
 
+    if (inventoryDataSource === "loading") {
+      setSelectionError("酒店房型库存接口加载中，请稍后再生成开团计划。");
+      setActiveTab("home");
+      return;
+    }
+
+    if (availableInventory.length === 0) {
+      setSelectionError("酒店房型库存接口未返回数据，无法生成开团计划。");
+      setActiveTab("home");
+      return;
+    }
+
     setSelectionError("");
     const nextResult = generateOpeningPlans({
       products: selectedProducts,
       productOpeningConfigs: openingConfigs,
-      hotels: availableHotels,
-      inventory,
+      hotels: hotelsForPlanning,
+      inventory: availableInventory,
       config: initialStrategyConfig,
       startDate,
       endDate,
@@ -364,6 +424,9 @@ function App() {
               </Tag>
               <Tag icon={<ApartmentOutlined />} color="cyan">
                 {getHotelDataSourceLabel(hotelDataSource, availableHotels.length)}
+              </Tag>
+              <Tag icon={<TableOutlined />} color="purple">
+                {getInventoryDataSourceLabel(inventoryDataSource, availableInventory.length)}
               </Tag>
             </Space>
           </div>
@@ -477,6 +540,16 @@ function getHotelDataSourceLabel(
   if (dataSource === "loading") return "酒店信息接口加载中";
   if (dataSource === "empty") return "酒店信息接口未返回数据";
   return "酒店信息接口异常";
+}
+
+function getInventoryDataSourceLabel(
+  dataSource: "loading" | "api" | "empty" | "error",
+  inventoryCount: number,
+) {
+  if (dataSource === "api") return `库存接口 / ${inventoryCount} 条库存`;
+  if (dataSource === "loading") return "库存接口加载中";
+  if (dataSource === "empty") return "库存接口未返回数据";
+  return "库存接口异常";
 }
 
 function createExecutionBatchId() {
