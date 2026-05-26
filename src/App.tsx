@@ -14,13 +14,16 @@ import {
   hotels,
   inventory,
   productOpeningConfigs as initialProductOpeningConfigs,
-  products as mockProducts,
   strategyConfig as initialStrategyConfig,
 } from "./config/data";
 import {
   mergeOpeningConfigsForProducts,
 } from "./config/runtimeData";
-import { generateOpeningPayload, generateOpeningPlans } from "./engine/openingEngine";
+import {
+  buildInventoryRowsFromInventory,
+  generateOpeningPayload,
+  generateOpeningPlans,
+} from "./engine/openingEngine";
 import { AutoOpeningPage } from "./pages/AutoOpeningPage";
 import { ExecutionResultPage } from "./pages/ExecutionResultPage";
 import { InventoryPage } from "./pages/InventoryPage";
@@ -58,16 +61,17 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("home");
   const [startDate, setStartDate] = useState("2026-06-01");
   const [endDate, setEndDate] = useState("2026-06-30");
-  const [draftProductCode, setDraftProductCode] = useState("P001");
-  const [draftItineraryKey, setDraftItineraryKey] = useState("P001|IT-XMMLB-7D");
-  const [addedItineraryKeys, setAddedItineraryKeys] = useState(["P001|IT-XMMLB-7D"]);
+  const [draftProductCode, setDraftProductCode] = useState("");
+  const [draftItineraryKey, setDraftItineraryKey] = useState("");
+  const [addedItineraryKeys, setAddedItineraryKeys] = useState<string[]>([]);
   const [selectionError, setSelectionError] = useState("");
   const [result, setResult] = useState<GenerateOpeningResult | null>(null);
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
   const [executionHistory, setExecutionHistory] = useState<OpeningExecutionRecord[]>([]);
   const [latestBatchId, setLatestBatchId] = useState("");
-  const [availableProducts, setAvailableProducts] = useState<Product[]>(mockProducts);
-  const [productDataSource, setProductDataSource] = useState<"loading" | "api" | "mock">("loading");
+  const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
+  const [productDataSource, setProductDataSource] =
+    useState<"loading" | "api" | "empty" | "error">("loading");
   const [openingConfigs, setOpeningConfigs] = useState<ProductOpeningConfig[]>(() =>
     cloneValue(initialProductOpeningConfigs),
   );
@@ -90,6 +94,10 @@ function App() {
     const blocked = result.openingPlans.length - openable;
     return `${openable} 待确认 / ${blocked} 需处理`;
   }, [result]);
+  const inventoryRows = useMemo(
+    () => result?.inventoryRows ?? buildInventoryRowsFromInventory(inventory),
+    [result],
+  );
 
   const resetGeneratedState = () => {
     setResult(null);
@@ -101,7 +109,7 @@ function App() {
 
     fetchProductItineraries()
       .then((apiProducts) => {
-        if (ignore || apiProducts.length === 0) return;
+        if (ignore) return;
         setAvailableProducts(apiProducts);
         setOpeningConfigs((currentConfigs) =>
           mergeOpeningConfigsForProducts(
@@ -110,12 +118,13 @@ function App() {
             initialStrategyConfig.businessTypeOpeningRules,
           ),
         );
-        setProductDataSource("api");
+        setProductDataSource(apiProducts.length > 0 ? "api" : "empty");
       })
       .catch((error) => {
-        console.warn("产品行程接口不可用，已回落到本地 mock 数据", error);
+        console.warn("产品行程接口不可用", error);
         if (!ignore) {
-          setProductDataSource("mock");
+          setAvailableProducts([]);
+          setProductDataSource("error");
         }
       });
 
@@ -140,7 +149,7 @@ function App() {
     );
     setAddedItineraryKeys((currentKeys) => {
       const validKeys = currentKeys.filter((key) => availableItineraryKeys.has(key));
-      return validKeys.length > 0 ? validKeys : [firstItineraryKey];
+      return validKeys;
     });
     resetGeneratedState();
   }, [availableProducts]);
@@ -318,11 +327,7 @@ function App() {
                 {generatedSummary}
               </Tag>
               <Tag icon={<ApartmentOutlined />} color="geekblue">
-                {productDataSource === "api"
-                  ? "产品行程接口 / 配置化开团规则"
-                  : productDataSource === "loading"
-                    ? "产品行程接口加载中"
-                    : "产品行程 Mock / 配置化开团规则"}
+                {getDataSourceLabel(productDataSource)}
               </Tag>
             </Space>
           </div>
@@ -383,7 +388,7 @@ function App() {
               onExportBatch={handleExportExecutionBatch}
             />
           ) : null}
-          {activeTab === "inventory" ? <InventoryPage rows={result?.inventoryRows ?? []} /> : null}
+          {activeTab === "inventory" ? <InventoryPage rows={inventoryRows} /> : null}
           {activeTab === "payload" ? <PayloadPage payloads={result?.payloads ?? []} /> : null}
         </Content>
       </Layout>
@@ -415,6 +420,13 @@ function buildProductOptions(productItineraries: Product[]): ProductOption[] {
   return [...optionByProductCode.values()].sort((a, b) =>
     `${a.productCode}-${a.productName}`.localeCompare(`${b.productCode}-${b.productName}`, "zh-CN"),
   );
+}
+
+function getDataSourceLabel(dataSource: "loading" | "api" | "empty" | "error") {
+  if (dataSource === "api") return "产品行程接口 / 配置化开团规则";
+  if (dataSource === "loading") return "产品行程接口加载中";
+  if (dataSource === "empty") return "产品行程接口未返回数据 / 配置化开团规则";
+  return "产品行程接口异常 / 配置化开团规则";
 }
 
 function createExecutionBatchId() {

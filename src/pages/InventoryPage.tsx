@@ -84,7 +84,7 @@ export function InventoryPage({ rows }: { rows: InventoryViewRow[] }) {
   if (rows.length === 0) {
     return (
       <Card>
-        <Empty description="生成开团计划后，这里会按日期、酒店和房型展示占用情况。" />
+        <Empty description="酒店房型库存接口未返回数据；接入库存接口后无需生成开团计划也会展示资源占用情况。" />
       </Card>
     );
   }

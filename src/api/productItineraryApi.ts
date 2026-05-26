@@ -1,5 +1,6 @@
 import type {
   BusinessType,
+  ItinerarySpec,
   PriceConfig,
   PriceType,
   Product,
@@ -36,8 +37,10 @@ interface ProductItineraryApiItem {
   priceModelDesc?: string;
   dailyHotelsJson?: string | null;
   dailyActivitiesJson?: string | null;
+  itinerarySpecsJson?: string | null;
   dailyHotels?: ApiDailyHotel[];
   dailyActivities?: ApiDailyActivity[];
+  itinerarySpecs?: ApiItinerarySpec[];
 }
 
 interface ApiDailyHotel {
@@ -59,6 +62,15 @@ interface ApiDailyActivity {
 interface ApiActivity {
   title?: string;
   timeSlotDesc?: string;
+}
+
+interface ApiItinerarySpec {
+  adult?: number;
+  children?: number;
+  itinerarySpecs?: string;
+  itinerarySpecsDesc?: string;
+  priceModel?: string;
+  priceModelDesc?: string;
 }
 
 export async function fetchProductItineraries(): Promise<Product[]> {
@@ -94,6 +106,9 @@ function normalizeProductItinerary(item: ProductItineraryApiItem): Product | nul
     item.dailyActivities,
     item.dailyActivitiesJson,
   );
+  const itinerarySpecs = normalizeItinerarySpecs(
+    normalizeJsonArray<ApiItinerarySpec>(item.itinerarySpecs, item.itinerarySpecsJson),
+  );
   const priceType = normalizePriceType(item.priceModel, item.priceModelDesc);
 
   return {
@@ -105,7 +120,8 @@ function normalizeProductItinerary(item: ProductItineraryApiItem): Product | nul
     tripDays: item.itineraryDays || getMaxDay(dailyHotels, dailyActivities) || 0,
     priceModel: item.priceModel,
     priceModelDesc: priceType,
-    priceConfig: buildPriceConfig(priceType, item.categorySubDesc),
+    itinerarySpecs,
+    priceConfig: buildPriceConfig(priceType, itinerarySpecs, item.categorySubDesc),
     dailyItinerary: buildDailyItinerary(
       dailyHotels,
       dailyActivities,
@@ -150,16 +166,18 @@ function buildDailyItinerary(
 
 function buildPriceConfig(
   priceType: PriceType,
+  itinerarySpecs: ItinerarySpec[],
   businessTypeDesc?: string,
 ): PriceConfig {
   if (priceType === "家庭") {
     return {
       priceType,
       singleRoomSupplement: null,
-      familyPrices: [1, 2].map((adultCount) => ({
-        familyCode: `${adultCount}大1小`,
-        adultCount,
-        childCount: 1,
+      familyPrices: itinerarySpecs.map((spec) => ({
+        specCode: spec.specCode,
+        familyCode: spec.specName,
+        adultCount: spec.adultCount,
+        childCount: spec.childCount,
         bigChildPrice: null,
         middleChildPrice: null,
         smallChildPrice: null,
@@ -183,6 +201,29 @@ function buildPriceConfig(
     childPriceFollowsAdult: true,
     ...(isGuaranteeBusinessType(businessTypeDesc) ? { guaranteeAmount: null } : {}),
   };
+}
+
+function normalizeItinerarySpecs(specs: ApiItinerarySpec[]): ItinerarySpec[] {
+  return specs.map((spec, index) => {
+    const adultCount = spec.adult ?? 0;
+    const childCount = spec.children ?? 0;
+
+    return {
+      specCode: spec.itinerarySpecs?.trim() || `SPEC-${index + 1}`,
+      specName: spec.itinerarySpecsDesc?.trim() || formatSpecName(adultCount, childCount),
+      adultCount,
+      childCount,
+      priceModel: spec.priceModel,
+      priceModelDesc: spec.priceModelDesc,
+    };
+  });
+}
+
+function formatSpecName(adultCount: number, childCount: number) {
+  if (adultCount > 0 && childCount > 0) return `${adultCount}成人${childCount}儿童`;
+  if (adultCount > 0) return `${adultCount}成人`;
+  if (childCount > 0) return `${childCount}儿童`;
+  return "接口未返回";
 }
 
 function getMaxDay(dailyHotels: ApiDailyHotel[], dailyActivities: ApiDailyActivity[]): number {

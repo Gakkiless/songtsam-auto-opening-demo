@@ -441,6 +441,17 @@ export function generateOpeningPlans(params: {
   };
 }
 
+export function buildInventoryRowsFromInventory(inventory: InventoryItem[]): InventoryViewRow[] {
+  return inventory
+    .map((inventorySnapshot) => buildInventoryViewRow(inventorySnapshot, undefined))
+    .sort((a, b) =>
+      `${a.date}-${a.hotelName}-${a.roomTypeName}`.localeCompare(
+        `${b.date}-${b.hotelName}-${b.roomTypeName}`,
+        "zh-CN",
+      ),
+    );
+}
+
 export function getItineraryShortCode(product: Product): string {
   return product.dailyItinerary.map((day) => day.hotelShortName).filter(Boolean).join("");
 }

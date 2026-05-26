@@ -33,8 +33,18 @@ export interface Product {
   tripDays: number;
   priceModel?: string;
   priceModelDesc?: PriceType;
+  itinerarySpecs: ItinerarySpec[];
   priceConfig?: PriceConfig;
   dailyItinerary: ProductItineraryDay[];
+}
+
+export interface ItinerarySpec {
+  specCode: string;
+  specName: string;
+  adultCount: number;
+  childCount: number;
+  priceModel?: string;
+  priceModelDesc?: string;
 }
 
 export interface ProductRoomTypePreference {
@@ -73,6 +83,7 @@ export interface PerPersonPriceConfig {
 }
 
 export interface FamilyPriceItem {
+  specCode: string;
   familyCode: string;
   adultCount: number;
   childCount: number;

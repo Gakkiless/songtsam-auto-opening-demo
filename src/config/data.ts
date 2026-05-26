@@ -1,18 +1,68 @@
-import hotelsJson from "../mock/hotels.json";
-import inventoryJson from "../mock/inventory.json";
-import productOpeningConfigJson from "../mock/productOpeningConfig.json";
-import productsJson from "../mock/products.json";
-import strategyConfigJson from "../mock/strategyConfig.json";
 import type {
   Hotel,
   InventoryItem,
-  Product,
   ProductOpeningConfig,
   StrategyConfig,
 } from "../types/domain";
 
-export const hotels = hotelsJson as Hotel[];
-export const inventory = inventoryJson as InventoryItem[];
-export const productOpeningConfigs = productOpeningConfigJson as ProductOpeningConfig[];
-export const products = productsJson as Product[];
-export const strategyConfig = strategyConfigJson as StrategyConfig;
+export const hotels: Hotel[] = [];
+export const inventory: InventoryItem[] = [];
+export const productOpeningConfigs: ProductOpeningConfig[] = [];
+
+export const strategyConfig: StrategyConfig = {
+  businessTypeOpeningRules: [
+    {
+      businessType: "主题团",
+      enabled: true,
+      label: "每周 1 团",
+      frequencyType: "weekly",
+      weekdays: [6],
+      allowedDepartureRule: {
+        type: "none",
+        description: "不限出发日",
+      },
+      preferredWeekdays: [],
+      fallbackWeekdays: [],
+    },
+    {
+      businessType: "自由行",
+      enabled: true,
+      label: "隔日开团，不限制出发日",
+      frequencyType: "intervalDays",
+      intervalDays: 2,
+      allowedDepartureRule: {
+        type: "none",
+        description: "不限出发日",
+      },
+      preferredWeekdays: [],
+      fallbackWeekdays: [],
+    },
+    {
+      businessType: "私享管家",
+      enabled: true,
+      label: "每 3 天 1 团",
+      frequencyType: "intervalDays",
+      intervalDays: 3,
+      allowedDepartureRule: {
+        type: "none",
+        description: "不限出发日",
+      },
+      preferredWeekdays: [],
+      fallbackWeekdays: [],
+    },
+    {
+      businessType: "目的地套餐",
+      enabled: true,
+      label: "每日开团",
+      frequencyType: "daily",
+      allowedDepartureRule: {
+        type: "none",
+        description: "不限出发日",
+      },
+      preferredWeekdays: [],
+      fallbackWeekdays: [],
+    },
+  ],
+  roomLevelPriority: ["基础"],
+  autoUseAdvancedRoom: false,
+};

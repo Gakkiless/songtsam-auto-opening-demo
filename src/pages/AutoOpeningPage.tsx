@@ -443,6 +443,7 @@ export function AutoOpeningPage({
         {configModalOpeningConfig ? (
           <InlineItineraryConfig
             businessType={configModalProduct?.businessType ?? "主题团"}
+            itinerarySpecs={configModalProduct?.itinerarySpecs ?? []}
             openingConfig={configModalOpeningConfig}
             resolvedOpeningConfig={configModalResolvedOpeningConfig}
             onUpdateProductOpeningConfig={onUpdateProductOpeningConfig}
@@ -537,11 +538,13 @@ function OpeningConfigSummary({
 
 function InlineItineraryConfig({
   businessType,
+  itinerarySpecs,
   openingConfig,
   resolvedOpeningConfig,
   onUpdateProductOpeningConfig,
 }: {
   businessType: Product["businessType"];
+  itinerarySpecs: Product["itinerarySpecs"];
   openingConfig: ProductOpeningConfig;
   resolvedOpeningConfig: ReturnType<typeof resolveOpeningConfig>["openingConfig"];
   onUpdateProductOpeningConfig: (config: ProductOpeningConfig) => void;
@@ -742,6 +745,7 @@ function InlineItineraryConfig({
 
       <PriceConfigFields
         businessType={businessType}
+        itinerarySpecs={itinerarySpecs}
         priceConfig={openingConfig.priceConfig}
         onChange={(priceConfig) => updateConfig({ priceConfig })}
       />
@@ -751,10 +755,12 @@ function InlineItineraryConfig({
 
 function PriceConfigFields({
   businessType,
+  itinerarySpecs,
   priceConfig,
   onChange,
 }: {
   businessType: Product["businessType"];
+  itinerarySpecs: Product["itinerarySpecs"];
   priceConfig: PriceConfig;
   onChange: (priceConfig: PriceConfig) => void;
 }) {
@@ -765,6 +771,24 @@ function PriceConfigFields({
           <RuleField label="价格类型">
             <Tag color="blue">{priceConfig.priceType}</Tag>
             <Text type="secondary">由产品行程接口返回，不在前端选择。</Text>
+          </RuleField>
+        </Col>
+        <Col xs={24} md={12}>
+          <RuleField label="规格">
+            {itinerarySpecs.length > 0 ? (
+              <Space wrap size={[6, 6]}>
+                {itinerarySpecs.map((spec) => (
+                  <Tag key={spec.specCode}>
+                    {spec.specName}
+                    {spec.adultCount || spec.childCount
+                      ? ` / ${spec.adultCount}成人${spec.childCount ? `${spec.childCount}儿童` : ""}`
+                      : ""}
+                  </Tag>
+                ))}
+              </Space>
+            ) : (
+              <MissingValue />
+            )}
           </RuleField>
         </Col>
       </Row>
@@ -903,27 +927,43 @@ function FamilyPriceFields({
   onChange: (priceConfig: PriceConfig) => void;
 }) {
   const familyPriceRows = priceConfig.familyPrices.flatMap((item) => [
-    {
-      familyCode: item.familyCode,
-      adultCount: item.adultCount,
-      childLabel: "大童" as const,
-      priceField: "bigChildPrice" as const,
-      price: item.bigChildPrice,
-    },
-    {
-      familyCode: item.familyCode,
-      adultCount: item.adultCount,
-      childLabel: "中童" as const,
-      priceField: "middleChildPrice" as const,
-      price: item.middleChildPrice,
-    },
-    {
-      familyCode: item.familyCode,
-      adultCount: item.adultCount,
-      childLabel: "幼童" as const,
-      priceField: "smallChildPrice" as const,
-      price: item.smallChildPrice,
-    },
+    ...(item.childCount > 0
+      ? [
+          {
+            familyCode: item.familyCode,
+            adultCount: item.adultCount,
+            childCount: item.childCount,
+            childLabel: "大童" as const,
+            priceField: "bigChildPrice" as const,
+            price: item.bigChildPrice,
+          },
+          {
+            familyCode: item.familyCode,
+            adultCount: item.adultCount,
+            childCount: item.childCount,
+            childLabel: "中童" as const,
+            priceField: "middleChildPrice" as const,
+            price: item.middleChildPrice,
+          },
+          {
+            familyCode: item.familyCode,
+            adultCount: item.adultCount,
+            childCount: item.childCount,
+            childLabel: "幼童" as const,
+            priceField: "smallChildPrice" as const,
+            price: item.smallChildPrice,
+          },
+        ]
+      : [
+          {
+            familyCode: item.familyCode,
+            adultCount: item.adultCount,
+            childCount: item.childCount,
+            childLabel: undefined,
+            priceField: "bigChildPrice" as const,
+            price: item.bigChildPrice,
+          },
+        ]),
   ]);
 
   const updateFamilyPrice = (
@@ -971,7 +1011,14 @@ function FamilyPriceFields({
             dataIndex: "adultCount",
             width: 160,
             render: (_: number, record) => (
-              <Tag>{formatFamilyChildSpec(record.adultCount, record.childLabel)}</Tag>
+              <Tag>
+                {formatFamilyChildSpec(
+                  record.familyCode,
+                  record.adultCount,
+                  record.childCount,
+                  record.childLabel,
+                )}
+              </Tag>
             ),
           },
           {
@@ -996,8 +1043,9 @@ function FamilyPriceFields({
       />
 
       <Text type="secondary">
-        家庭规格由系统按价格类型组合，运营填写每个规格的价格。
+        家庭规格来自产品行程接口 itinerarySpecsJson，运营填写每个规格的价格。
       </Text>
+      {familyPriceRows.length === 0 ? <MissingValue /> : null}
     </Space>
   );
 }
@@ -1162,8 +1210,14 @@ function formatChannels(channels: OpeningChannel[]) {
   return channels.length > 0 ? channels.join("、") : "未配置";
 }
 
-function formatFamilyChildSpec(adultCount: number, childLabel: "大童" | "中童" | "幼童") {
-  return `${adultCount}成人1${childLabel}`;
+function formatFamilyChildSpec(
+  familyCode: string,
+  adultCount: number,
+  childCount: number,
+  childLabel?: "大童" | "中童" | "幼童",
+) {
+  if (!childLabel) return familyCode;
+  return `${adultCount}成人${childCount}${childLabel}`;
 }
 
 function isMissingAmount(value: InterfaceAmount | undefined) {
