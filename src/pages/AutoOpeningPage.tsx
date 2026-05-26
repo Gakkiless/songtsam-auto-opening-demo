@@ -365,7 +365,7 @@ export function AutoOpeningPage({
                     <Descriptions.Item label="行程名称">{product.itineraryName}</Descriptions.Item>
                     <Descriptions.Item label="行程天数">{formatTripDuration(product)}</Descriptions.Item>
                     <Descriptions.Item label="行程酒店">
-                      {getItineraryShortCode(product) || <MissingValue />}
+                      {getItineraryShortCode(product)}
                     </Descriptions.Item>
                   </Descriptions>
 
@@ -394,14 +394,8 @@ export function AutoOpeningPage({
                         dataIndex: "hotelName",
                         render: (_: string, record) => (
                           <Space direction="vertical" size={0}>
-                            {record.hotelMissing ? (
-                              <MissingValue />
-                            ) : (
-                              <>
-                                <Text>{record.hotelName}</Text>
-                                <Text type="secondary">{record.hotelCode}</Text>
-                              </>
-                            )}
+                            <Text>{record.hotelName}</Text>
+                            <Text type="secondary">{record.hotelCode}</Text>
                           </Space>
                         ),
                       },
@@ -409,12 +403,12 @@ export function AutoOpeningPage({
                         title: "简称",
                         dataIndex: "hotelShortName",
                         width: 70,
-                        render: (value: string) => value || <MissingValue />,
+                        render: (value: string) => value,
                       },
                       {
                         title: "每日活动",
                         dataIndex: "activityName",
-                        render: (value: string) => value || <MissingValue />,
+                        render: (value: string) => value,
                       },
                     ]}
                   />

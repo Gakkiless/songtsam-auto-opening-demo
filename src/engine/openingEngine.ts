@@ -132,7 +132,9 @@ export function calculateItineraryResourceUsage(
   departureDate: string,
   openingConfig: ResolvedOpeningConfig,
 ): ItineraryResourceRequirement[] {
-  const stayDays = [...product.dailyItinerary].sort((a, b) => a.dayIndex - b.dayIndex);
+  const stayDays = product.dailyItinerary
+    .filter((day) => day.hotelCode && day.hotelName)
+    .sort((a, b) => a.dayIndex - b.dayIndex);
   const requirements: ItineraryResourceRequirement[] = [];
   let blockNumber = 0;
   let previousHotelCode = "";
