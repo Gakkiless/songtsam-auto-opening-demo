@@ -4,8 +4,15 @@ import {
   DownloadOutlined,
   HistoryOutlined,
 } from "@ant-design/icons";
-import { Button, Card, Empty, Space, Statistic, Table, Tag, Typography } from "antd";
+import { Button, Card, Col, Empty, InputNumber, Row, Space, Statistic, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { useMemo } from "react";
+import {
+  calculateExecutionRecordSalesValue,
+  formatCurrency,
+  formatPercent,
+  summarizeExecutionSales,
+} from "../engine/salesProjection";
 import type { OpeningExecutionRecord, OpeningExecutionStatus } from "../types/domain";
 
 const { Text } = Typography;
@@ -13,12 +20,35 @@ const { Text } = Typography;
 export function ExecutionResultPage({
   records,
   latestBatchId,
+  salesTarget,
+  historicalSuccessRate,
+  onSalesTargetChange,
+  onHistoricalSuccessRateChange,
   onExportBatch,
 }: {
   records: OpeningExecutionRecord[];
   latestBatchId: string;
+  salesTarget: number | null;
+  historicalSuccessRate: number | null;
+  onSalesTargetChange: (value: number | null) => void;
+  onHistoricalSuccessRateChange: (value: number | null) => void;
   onExportBatch: (batchId: string) => void;
 }) {
+  const latestRecords = useMemo(
+    () => (latestBatchId ? records.filter((record) => record.batchId === latestBatchId) : []),
+    [latestBatchId, records],
+  );
+  const successCount = latestRecords.filter((record) => record.status === "开团成功").length;
+  const failedCount = latestRecords.filter((record) => record.status === "开团失败").length;
+  const latestSalesSummary = useMemo(
+    () => summarizeExecutionSales(latestRecords, salesTarget, historicalSuccessRate),
+    [latestRecords, salesTarget, historicalSuccessRate],
+  );
+  const batches = useMemo(
+    () => buildExecutionBatches(records, salesTarget, historicalSuccessRate),
+    [records, salesTarget, historicalSuccessRate],
+  );
+
   if (records.length === 0) {
     return (
       <Card>
@@ -26,13 +56,6 @@ export function ExecutionResultPage({
       </Card>
     );
   }
-
-  const latestRecords = latestBatchId
-    ? records.filter((record) => record.batchId === latestBatchId)
-    : [];
-  const successCount = latestRecords.filter((record) => record.status === "开团成功").length;
-  const failedCount = latestRecords.filter((record) => record.status === "开团失败").length;
-  const batches = buildExecutionBatches(records);
 
   const batchColumns: ColumnsType<OpeningExecutionBatch> = [
     {
@@ -70,6 +93,35 @@ export function ExecutionResultPage({
       dataIndex: "itineraryCount",
       width: 140,
       render: (value: number, batch) => `${batch.productCount} 个产品 / ${value} 条行程`,
+    },
+    {
+      title: "团期总销售价值",
+      dataIndex: "totalSalesValue",
+      width: 160,
+      align: "right",
+      render: (value: number, batch) => (
+        <Space direction="vertical" size={0}>
+          <Text strong>{formatCurrency(value)}</Text>
+          {batch.missingPriceCount > 0 ? (
+            <Text type="secondary">{batch.missingPriceCount} 个团期价格待填写</Text>
+          ) : null}
+        </Space>
+      ),
+    },
+    {
+      title: "目标占比",
+      dataIndex: "targetRatio",
+      width: 120,
+      align: "right",
+      render: (value: number | null) => (value === null ? <Text type="secondary">待填写目标</Text> : formatPercent(value)),
+    },
+    {
+      title: "预估销售额",
+      dataIndex: "estimatedSalesValue",
+      width: 150,
+      align: "right",
+      render: (value: number | null) =>
+        value === null ? <Text type="secondary">待填写成团率</Text> : formatCurrency(value),
     },
     {
       title: "操作",
@@ -131,6 +183,17 @@ export function ExecutionResultPage({
       align: "right",
     },
     {
+      title: "团期销售价值",
+      dataIndex: "salesValue",
+      width: 140,
+      align: "right",
+      render: (_: unknown, record) => {
+        if (record.status !== "开团成功") return <Text type="secondary">不计入</Text>;
+        const value = calculateExecutionRecordSalesValue(record);
+        return value === null ? <Text type="secondary">价格待填写</Text> : formatCurrency(value);
+      },
+    },
+    {
       title: "房型房数",
       dataIndex: "roomSummary",
       width: 240,
@@ -181,6 +244,56 @@ export function ExecutionResultPage({
             valueStyle={failedCount > 0 ? { color: "#cf1322" } : undefined}
           />
           <Statistic title="历史执行" value={batches.length} suffix="次" />
+        </Space>
+      </Card>
+
+      <Card title="销售测算">
+        <Row gutter={[16, 16]} align="bottom">
+          <Col xs={24} md={8}>
+            <Text strong>总销售目标</Text>
+            <InputNumber
+              min={0}
+              addonBefore="¥"
+              value={salesTarget ?? undefined}
+              placeholder="请填写"
+              className="full-width control-input"
+              onChange={(value) => onSalesTargetChange(value)}
+            />
+          </Col>
+          <Col xs={24} md={8}>
+            <Text strong>历史成团率</Text>
+            <InputNumber
+              min={0}
+              max={100}
+              addonAfter="%"
+              value={historicalSuccessRate ?? undefined}
+              placeholder="请填写"
+              className="full-width control-input"
+              onChange={(value) => onHistoricalSuccessRateChange(value)}
+            />
+          </Col>
+          <Col xs={24} md={8}>
+            <Text type="secondary">
+              测算口径：只统计开团成功的团期；人价按最大人数库存，家庭价按规格均价乘房间数，套价按可售套数。
+            </Text>
+          </Col>
+        </Row>
+
+        <Space wrap size={16} style={{ marginTop: 16 }}>
+          <Statistic title="本次团期总销售价值" value={latestSalesSummary.totalSalesValue} formatter={(value) => formatCurrency(Number(value))} />
+          <Statistic
+            title="占总销售目标"
+            value={latestSalesSummary.targetRatio === null ? "待填写目标" : formatPercent(latestSalesSummary.targetRatio)}
+          />
+          <Statistic
+            title="预估销售额"
+            value={
+              latestSalesSummary.estimatedSalesValue === null
+                ? "待填写成团率"
+                : formatCurrency(latestSalesSummary.estimatedSalesValue)
+            }
+          />
+          <Statistic title="价格待填写团期" value={latestSalesSummary.missingPriceCount} suffix="个" />
         </Space>
       </Card>
 
@@ -260,10 +373,18 @@ interface OpeningExecutionBatch {
   dateRange: string;
   productCount: number;
   itineraryCount: number;
+  totalSalesValue: number;
+  targetRatio: number | null;
+  estimatedSalesValue: number | null;
+  missingPriceCount: number;
   records: OpeningExecutionRecord[];
 }
 
-function buildExecutionBatches(records: OpeningExecutionRecord[]): OpeningExecutionBatch[] {
+function buildExecutionBatches(
+  records: OpeningExecutionRecord[],
+  salesTarget: number | null,
+  historicalSuccessRate: number | null,
+): OpeningExecutionBatch[] {
   const recordsByBatch = new Map<string, OpeningExecutionRecord[]>();
 
   records.forEach((record) => {
@@ -282,6 +403,7 @@ function buildExecutionBatches(records: OpeningExecutionRecord[]): OpeningExecut
       );
       const successCount = sortedRecords.filter((record) => record.status === "开团成功").length;
       const failedCount = sortedRecords.length - successCount;
+      const salesSummary = summarizeExecutionSales(sortedRecords, salesTarget, historicalSuccessRate);
 
       return {
         batchId,
@@ -295,6 +417,10 @@ function buildExecutionBatches(records: OpeningExecutionRecord[]): OpeningExecut
             : departureDates[0] ?? "-",
         productCount: productCodes.size,
         itineraryCount: itineraryKeys.size,
+        totalSalesValue: salesSummary.totalSalesValue,
+        targetRatio: salesSummary.targetRatio,
+        estimatedSalesValue: salesSummary.estimatedSalesValue,
+        missingPriceCount: salesSummary.missingPriceCount,
         records: sortedRecords,
       };
     })

@@ -25,6 +25,10 @@ import {
   generateOpeningPayload,
   generateOpeningPlans,
 } from "./engine/openingEngine";
+import {
+  calculateExecutionRecordSalesValue,
+  summarizeExecutionSales,
+} from "./engine/salesProjection";
 import { AutoOpeningPage } from "./pages/AutoOpeningPage";
 import { ExecutionResultPage } from "./pages/ExecutionResultPage";
 import { InventoryPage } from "./pages/InventoryPage";
@@ -71,6 +75,8 @@ function App() {
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
   const [executionHistory, setExecutionHistory] = useState<OpeningExecutionRecord[]>([]);
   const [latestBatchId, setLatestBatchId] = useState("");
+  const [salesTarget, setSalesTarget] = useState<number | null>(null);
+  const [historicalSuccessRate, setHistoricalSuccessRate] = useState<number | null>(null);
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [availableHotels, setAvailableHotels] = useState<Hotel[]>(hotels);
   const [productDataSource, setProductDataSource] =
@@ -294,7 +300,7 @@ function App() {
     const batchRecords = executionHistory.filter((record) => record.batchId === batchId);
     if (batchRecords.length === 0) return;
 
-    const csv = toExecutionCsv(batchRecords);
+    const csv = toExecutionCsv(batchRecords, salesTarget, historicalSuccessRate);
     const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -415,6 +421,10 @@ function App() {
             <ExecutionResultPage
               records={executionHistory}
               latestBatchId={latestBatchId}
+              salesTarget={salesTarget}
+              historicalSuccessRate={historicalSuccessRate}
+              onSalesTargetChange={setSalesTarget}
+              onHistoricalSuccessRateChange={setHistoricalSuccessRate}
               onExportBatch={handleExportExecutionBatch}
             />
           ) : null}
@@ -497,6 +507,7 @@ function createMockExecutionRecord(
     departureDate: plan.departureDate,
     channels: plan.channels,
     groupSize: plan.groupSize,
+    roomCount: plan.roomCount,
     priceConfig: plan.priceConfig,
     roomSummary: summarizePlanRooms(plan),
     status: failed ? "开团失败" : "开团成功",
@@ -535,7 +546,12 @@ function summarizePlanRooms(plan: OpeningPlan) {
   return summaries.length > 0 ? summaries.join("、") : `${plan.roomCount} 间`;
 }
 
-function toExecutionCsv(records: OpeningExecutionRecord[]) {
+function toExecutionCsv(
+  records: OpeningExecutionRecord[],
+  salesTarget: number | null,
+  historicalSuccessRate: number | null,
+) {
+  const salesSummary = summarizeExecutionSales(records, salesTarget, historicalSuccessRate);
   const headers = [
     "执行批次",
     "执行时间",
@@ -552,26 +568,47 @@ function toExecutionCsv(records: OpeningExecutionRecord[]) {
     "行程代码",
     "行程名称",
     "最大人数库存",
+    "房间数",
+    "团期销售价值",
+    "本次团期总销售价值",
+    "总销售目标",
+    "目标占比",
+    "历史成团率",
+    "预估销售额",
+    "价格待填写团期",
     "房型房数",
   ];
-  const rows = records.map((record) => [
-    record.batchId,
-    record.executedAt,
-    record.status,
-    record.groupPeriodNo ?? "",
-    record.failureReason ?? "",
-    record.departureDate,
-    record.businessType,
-    record.channels.join("、"),
-    record.priceConfig?.priceType ?? "",
-    summarizePriceConfig(record.priceConfig),
-    record.productCode,
-    record.productName,
-    record.itineraryCode,
-    record.itineraryName,
-    String(record.groupSize),
-    record.roomSummary,
-  ]);
+  const rows = records.map((record) => {
+    const recordSalesValue =
+      record.status === "开团成功" ? calculateExecutionRecordSalesValue(record) : null;
+
+    return [
+      record.batchId,
+      record.executedAt,
+      record.status,
+      record.groupPeriodNo ?? "",
+      record.failureReason ?? "",
+      record.departureDate,
+      record.businessType,
+      record.channels.join("、"),
+      record.priceConfig?.priceType ?? "",
+      summarizePriceConfig(record.priceConfig),
+      record.productCode,
+      record.productName,
+      record.itineraryCode,
+      record.itineraryName,
+      String(record.groupSize),
+      String(record.roomCount),
+      record.status === "开团成功" ? formatCsvAmount(recordSalesValue) : "不计入",
+      formatCsvAmount(salesSummary.totalSalesValue),
+      formatCsvAmount(salesTarget),
+      formatCsvRatio(salesSummary.targetRatio),
+      historicalSuccessRate === null ? "" : `${historicalSuccessRate}%`,
+      formatCsvAmount(salesSummary.estimatedSalesValue),
+      String(salesSummary.missingPriceCount),
+      record.roomSummary,
+    ];
+  });
 
   return [headers, ...rows].map((row) => row.map(escapeCsvValue).join(",")).join("\n");
 }
@@ -602,6 +639,10 @@ function summarizePriceConfig(priceConfig: OpeningExecutionRecord["priceConfig"]
 
 function formatCsvAmount(value: number | null | undefined) {
   return value === null || value === undefined ? "待填写" : String(value);
+}
+
+function formatCsvRatio(value: number | null | undefined) {
+  return value === null || value === undefined ? "" : `${(value * 100).toFixed(1)}%`;
 }
 
 function escapeCsvValue(value: string) {

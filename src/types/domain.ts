@@ -280,6 +280,7 @@ export interface OpeningExecutionRecord {
   departureDate: string;
   channels: OpeningChannel[];
   groupSize: number;
+  roomCount: number;
   priceConfig: PriceConfig | null;
   roomSummary: string;
   status: OpeningExecutionStatus;
