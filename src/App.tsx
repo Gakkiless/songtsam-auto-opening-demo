@@ -106,6 +106,11 @@ function App() {
     return availableProducts.filter((product) => selectedKeySet.has(getProductItineraryKey(product)));
   }, [availableProducts, addedItineraryKeys]);
 
+  const inventoryHotelCodes = useMemo(
+    () => resolveInventoryHotelCodes(selectedProducts, availableHotels),
+    [availableHotels, selectedProducts],
+  );
+
   const generatedSummary = useMemo(() => {
     if (!result) return "未生成";
     const openable = result.openingPlans.filter((plan) => plan.status === "可开团").length;
@@ -178,11 +183,10 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const hotelCodes = availableHotels.map((hotel) => hotel.hotelCode).filter(Boolean);
-
-    if (hotelCodes.length === 0 || !startDate || !endDate) {
+    if (inventoryHotelCodes.length === 0 || !startDate || !endDate) {
       setAvailableInventory([]);
       setInventoryDataSource(hotelDataSource === "loading" ? "loading" : "empty");
+      resetGeneratedState();
       return;
     }
 
@@ -190,7 +194,7 @@ function App() {
     setInventoryDataSource("loading");
 
     fetchInventoryBoard({
-      hotelCodes,
+      hotelCodes: inventoryHotelCodes,
       beginDate: startDate,
       endDate,
     })
@@ -212,7 +216,7 @@ function App() {
     return () => {
       ignore = true;
     };
-  }, [availableHotels, endDate, hotelDataSource, startDate]);
+  }, [endDate, hotelDataSource, inventoryHotelCodes, startDate]);
 
   useEffect(() => {
     if (availableProducts.length === 0) return;
@@ -426,7 +430,11 @@ function App() {
                 {getHotelDataSourceLabel(hotelDataSource, availableHotels.length)}
               </Tag>
               <Tag icon={<TableOutlined />} color="purple">
-                {getInventoryDataSourceLabel(inventoryDataSource, availableInventory.length)}
+                {getInventoryDataSourceLabel(
+                  inventoryDataSource,
+                  availableInventory.length,
+                  inventoryHotelCodes.length,
+                )}
               </Tag>
             </Space>
           </div>
@@ -525,6 +533,57 @@ function buildProductOptions(productItineraries: Product[]): ProductOption[] {
   );
 }
 
+function resolveInventoryHotelCodes(products: Product[], hotels: Hotel[]): string[] {
+  const codes = new Set<string>();
+  const hotelsByCode = new Map(hotels.map((hotel) => [normalizeHotelKeyword(hotel.hotelCode), hotel]));
+  const hotelsByName = new Map<string, Hotel>();
+
+  hotels.forEach((hotel) => {
+    hotelsByName.set(normalizeHotelKeyword(hotel.hotelName), hotel);
+    hotelsByName.set(normalizeHotelKeyword(hotel.hotelShortName), hotel);
+  });
+
+  products.forEach((product) => {
+    product.dailyItinerary.forEach((day) => {
+      if (!day.hotelCode && !day.hotelName && !day.hotelShortName) return;
+
+      const matchedHotel =
+        hotelsByCode.get(normalizeHotelKeyword(day.hotelCode)) ??
+        hotelsByName.get(normalizeHotelKeyword(day.hotelName)) ??
+        hotelsByName.get(normalizeHotelKeyword(day.hotelShortName)) ??
+        findHotelByLooseName(hotels, day.hotelName || day.hotelShortName);
+
+      if (matchedHotel) {
+        codes.add(matchedHotel.hotelCode);
+      }
+    });
+  });
+
+  return [...codes].sort();
+}
+
+function findHotelByLooseName(hotels: Hotel[], keyword: string): Hotel | undefined {
+  const normalizedKeyword = normalizeHotelKeyword(keyword);
+  if (!normalizedKeyword) return undefined;
+
+  return hotels.find((hotel) => {
+    const hotelName = normalizeHotelKeyword(hotel.hotelName);
+    const hotelShortName = normalizeHotelKeyword(hotel.hotelShortName);
+    return (
+      includesEither(hotelName, normalizedKeyword) ||
+      includesEither(hotelShortName, normalizedKeyword)
+    );
+  });
+}
+
+function normalizeHotelKeyword(value: string) {
+  return value.replace(/\s+/g, "").trim().toUpperCase();
+}
+
+function includesEither(left: string, right: string) {
+  return Boolean(left && right) && (left.includes(right) || right.includes(left));
+}
+
 function getDataSourceLabel(dataSource: "loading" | "api" | "empty" | "error") {
   if (dataSource === "api") return "产品行程接口 / 配置化开团规则";
   if (dataSource === "loading") return "产品行程接口加载中";
@@ -545,9 +604,11 @@ function getHotelDataSourceLabel(
 function getInventoryDataSourceLabel(
   dataSource: "loading" | "api" | "empty" | "error",
   inventoryCount: number,
+  hotelCount: number,
 ) {
   if (dataSource === "api") return `库存接口 / ${inventoryCount} 条库存`;
   if (dataSource === "loading") return "库存接口加载中";
+  if (hotelCount === 0) return "选择行程后查询库存";
   if (dataSource === "empty") return "库存接口未返回数据";
   return "库存接口异常";
 }

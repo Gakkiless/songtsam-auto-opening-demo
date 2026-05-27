@@ -61,7 +61,7 @@ src/
 
 - `src/api/productItineraryApi.ts`：产品行程接口 adapter，将接口返回的 `travelType`、`itineraryCode`、`categorySubDesc`、`priceModel`、`itinerarySpecsJson`、`dailyHotelsJson`、`dailyActivitiesJson` 等字段归一化为 Demo 内部 `Product` 模型。
 - `src/api/hotelApi.ts`：酒店信息接口 adapter，将接口返回的 `hotelCode`、`hotelName`、`hotelShort`、`sta` 归一化为 Demo 内部 `Hotel` 模型。
-- `src/api/inventoryApi.ts`：酒店房型库存接口 adapter，按当前开团日期区间和酒店信息接口返回的酒店编码查询 `/tool-api/inventory-board/query`，将 `rmtype`、`rmtypeName`、`publicPoolNum`、`blockAvailNum`、`preAllocationNum`、`preOccupiedNum`、`realOccupiedNum`、`pmsTotalNum`、`oooNum` 等字段归一化为 Demo 内部库存模型，并从库存行反推酒店房型。
+- `src/api/inventoryApi.ts`：酒店房型库存接口 adapter，按当前开团日期区间和“已选产品行程实际入住酒店”查询 `/tool-api/inventory-board/query`；酒店编码优先由酒店信息接口返回的酒店代码匹配，无法直接匹配时再用酒店名称/简称匹配。接口返回的 `rmtype`、`rmtypeName`、`publicPoolNum`、`blockAvailNum`、`preAllocationNum`、`preOccupiedNum`、`realOccupiedNum`、`pmsTotalNum`、`oooNum` 等字段会归一化为 Demo 内部库存模型，并从库存行反推酒店房型。
 - `src/config/data.ts`：当前只保留系统默认策略配置；酒店、房型和库存数组为空，等待真实接口补齐。
 - 酒店资源占用表基于库存接口数据直接渲染，不依赖先生成开团计划；生成计划后会叠加展示“本次计划占用”。
 
